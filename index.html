@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Towing Dashboard HUD // Physics & Compliance Telemetry</title>
+  
+  <!-- Android PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080c14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="hud-app-container">
+    
+    <!-- Top HUD Navigation Bar -->
+    <header class="hud-header">
+      <div class="brand-section">
+        <div class="hud-logo-icon">▲</div>
+        <div class="brand-title-wrap">
+          <h1>Towing Dashboard HUD <span class="brand-badge">PRO TELEMETRY</span></h1>
+          <div class="brand-sub">Physics-Engine Moment Balancer & Australian Transport Compliance</div>
+        </div>
+      </div>
+
+      <!-- Quick Vehicle & Caravan Selectors -->
+      <div class="rig-selector-wrap">
+        <div class="select-card">
+          <label>
+            Tow Vehicle 
+            <span class="custom-link" onclick="openVehicleModal()">Specs</span>
+          </label>
+          <select id="vehicle-select" aria-label="Select Tow Vehicle">
+            <!-- Dynamically populated from data.js -->
+          </select>
+        </div>
+
+        <div class="select-card">
+          <label>
+            Caravan / Trailer 
+            <span class="custom-link" onclick="openCaravanModal()">Specs</span>
+          </label>
+          <select id="caravan-select" aria-label="Select Caravan">
+            <!-- Dynamically populated from data.js -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="hud-btn" title="Toggle daylight high-contrast mode">
+          ☀️ Daylight Mode
+        </button>
+        <button id="reset-btn" class="hud-btn" title="Reset all simulation sliders to spreadsheet baseline">
+          ↺ Reset Baseline
+        </button>
+        <button id="print-manifest-btn" class="hud-btn primary" title="Generate printable weighbridge manifest">
+          📄 Trip Manifest
+        </button>
+      </div>
+    </header>
+
+    <!-- Master Telemetry Gauges Grid -->
+    <section class="master-gauges-grid" aria-label="Master Telemetry Cockpit">
+      
+      <!-- 1. GVM Gauge -->
+      <div id="gauge-gvm" class="gauge-card">
+        <div class="gauge-top-row">
+          <span class="gauge-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 18H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.19M15 6h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3.19"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+            Vehicle Mass (GVM)
+          </span>
+          <span id="gvm-badge" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="gauge-graphic-wrap">
+          <svg class="arc-gauge-svg" viewBox="0 0 200 110">
+            <path class="gauge-track" d="M 25 100 A 75 75 0 0 1 175 100" />
+            <path class="gauge-fill" d="M 25 100 A 75 75 0 0 1 175 100" />
+          </svg>
+          <div class="gauge-center-data">
+            <span class="gauge-value-big"><span id="gvm-curr-val">0</span><span class="gauge-unit">kg</span></span>
+            <span class="gauge-percent-tag">0.0%</span>
+          </div>
+        </div>
+        <div class="gauge-footer">
+          <div><span class="gauge-limit-text">Legal GVM: </span><span id="gvm-cap-val" class="gauge-limit-val">0 kg</span></div>
+          <div><span class="gauge-limit-text">Payload: </span><span id="gvm-margin-val" class="gauge-margin-text">+0 kg</span></div>
+        </div>
+      </div>
+
+      <!-- 2. ATM Gauge -->
+      <div id="gauge-atm" class="gauge-card">
+        <div class="gauge-top-row">
+          <span class="gauge-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+            Caravan Mass (ATM)
+          </span>
+          <span id="atm-badge" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="gauge-graphic-wrap">
+          <svg class="arc-gauge-svg" viewBox="0 0 200 110">
+            <path class="gauge-track" d="M 25 100 A 75 75 0 0 1 175 100" />
+            <path class="gauge-fill" d="M 25 100 A 75 75 0 0 1 175 100" />
+          </svg>
+          <div class="gauge-center-data">
+            <span class="gauge-value-big"><span id="atm-curr-val">0</span><span class="gauge-unit">kg</span></span>
+            <span class="gauge-percent-tag">0.0%</span>
+          </div>
+        </div>
+        <div class="gauge-footer">
+          <div><span class="gauge-limit-text">ATM Cap: </span><span id="atm-cap-val" class="gauge-limit-val">0 kg</span></div>
+          <div><span class="gauge-limit-text">Payload: </span><span id="atm-margin-val" class="gauge-margin-text">+0 kg</span></div>
+        </div>
+      </div>
+
+      <!-- 3. TBM (Towball Mass) Gauge -->
+      <div id="gauge-tbm" class="gauge-card">
+        <div class="gauge-top-row">
+          <span class="gauge-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Towball Mass (TBM)
+          </span>
+          <span id="tbm-badge" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="gauge-graphic-wrap">
+          <svg class="arc-gauge-svg" viewBox="0 0 200 110">
+            <path class="gauge-track" d="M 25 100 A 75 75 0 0 1 175 100" />
+            <path class="gauge-fill" d="M 25 100 A 75 75 0 0 1 175 100" />
+          </svg>
+          <div class="gauge-center-data">
+            <span class="gauge-value-big"><span id="tbm-curr-val">0</span><span class="gauge-unit">kg</span></span>
+            <span class="gauge-percent-tag">0.0%</span>
+          </div>
+        </div>
+        
+        <!-- TBM % Sweet Spot Bar -->
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted);">
+            <span>Ball % of ATM: <strong id="tbm-ratio-val" style="color: var(--accent-cyan);">0%</strong></span>
+            <span>Target: 8% - 11%</span>
+          </div>
+          <div class="tbm-sweet-bar" title="Towball percentage sweet spot (8-11% optimal)">
+            <div class="sweet-zone sweet-light" title="<8% High Sway Hazard"></div>
+            <div class="sweet-zone sweet-ideal" title="8-11% Optimal Highway Stability"></div>
+            <div class="sweet-zone sweet-heavy" title=">11% Heavy Ball Download"></div>
+            <div id="tbm-sweet-marker" class="sweet-marker"></div>
+          </div>
+        </div>
+
+        <div class="gauge-footer">
+          <div><span class="gauge-limit-text">Towbar Cap: </span><span id="tbm-cap-val" class="gauge-limit-val">0 kg</span></div>
+          <div><span class="gauge-limit-text">Margin: </span><span id="tbm-margin-val" class="gauge-margin-text">+0 kg</span></div>
+        </div>
+      </div>
+
+      <!-- 4. GCM Gauge -->
+      <div id="gauge-gcm" class="gauge-card">
+        <div class="gauge-top-row">
+          <span class="gauge-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Combined Mass (GCM)
+          </span>
+          <span id="gcm-badge" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="gauge-graphic-wrap">
+          <svg class="arc-gauge-svg" viewBox="0 0 200 110">
+            <path class="gauge-track" d="M 25 100 A 75 75 0 0 1 175 100" />
+            <path class="gauge-fill" d="M 25 100 A 75 75 0 0 1 175 100" />
+          </svg>
+          <div class="gauge-center-data">
+            <span class="gauge-value-big"><span id="gcm-curr-val">0</span><span class="gauge-unit">kg</span></span>
+            <span class="gauge-percent-tag">0.0%</span>
+          </div>
+        </div>
+        <div class="gauge-footer">
+          <div><span class="gauge-limit-text">GCM Limit: </span><span id="gcm-cap-val" class="gauge-limit-val">0 kg</span></div>
+          <div><span class="gauge-limit-text">Remaining: </span><span id="gcm-margin-val" class="gauge-margin-text">+0 kg</span></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Dynamic Rig Blueprint & Axle Balancing Schematic -->
+    <section class="rig-diagram-section">
+      <div class="section-head">
+        <div>
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Rig Vector Physics & Dynamic Axle Blueprint
+          </h2>
+          <div class="section-sub">Real-time moment arms around the caravan fulcrum and vehicle overhang cantilever</div>
+        </div>
+
+        <!-- Controls: Blueprint vs Photo Switcher & Upload -->
+        <div class="blueprint-controls">
+          <div class="view-toggle-group">
+            <button id="btn-view-blueprint" class="toggle-pill active" onclick="setRigViewMode('blueprint')">📐 Blueprint</button>
+            <button id="btn-view-photo" class="toggle-pill" onclick="setRigViewMode('photo')">📷 Rig Photo</button>
+          </div>
+
+          <input type="file" id="rig-photo-input" accept="image/jpeg,image/png,image/webp" style="display: none;" onchange="handleRigPhotoUpload(event)">
+          <button class="hud-btn" onclick="document.getElementById('rig-photo-input').click()" title="Upload a side photo of your car & caravan">
+            📷 Upload JPEG
+          </button>
+          <button id="btn-remove-photo" class="hud-btn" style="display: none;" onclick="removeRigPhoto()" title="Remove custom photo">
+            ✕ Remove
+          </button>
+        </div>
+      </div>
+      
+      <div id="blueprint-canvas-wrap" class="blueprint-canvas-wrap">
+        <!-- 1. Vector Blueprint SVG View -->
+        <svg id="rig-blueprint-svg" class="rig-svg" viewBox="0 0 1000 300">
+          <!-- Dynamically generated in app.js -->
+        </svg>
+
+        <!-- 2. Photo View Container -->
+        <div id="rig-photo-container" class="rig-photo-wrap" style="display: none;">
+          <div class="rig-photo-viewport">
+            <img id="rig-photo-img" src="" alt="Custom Rig Photo" style="display: none;">
+            
+            <!-- Empty State Dropzone -->
+            <div id="photo-empty-dropzone" class="photo-empty-dropzone" onclick="document.getElementById('rig-photo-input').click()">
+              <div class="dropzone-icon">📷</div>
+              <div class="dropzone-title">Upload a Photo of Your Tow Rig</div>
+              <div class="dropzone-sub">Drag & drop your ute & caravan JPEG here, or click to browse. The HUD will overlay your live axle loads and towball downforce directly over your photo.</div>
+              <button class="hud-btn primary" style="margin-top: 8px;">Select JPEG / PNG File</button>
+            </div>
+          </div>
+
+          <!-- Live Photo Telemetry Dock (Synchronized with physics) -->
+          <div class="photo-telemetry-dock" id="photo-telemetry-dock">
+            <!-- Dynamically populated from app.js -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mid Section: Storage Loading Matrix (What-If Sliders) & Diagnostics -->
+    <div class="dashboard-mid-split">
+      
+      <!-- Left: Storage Loading Matrix & Slider Simulation -->
+      <section class="card-panel">
+        <div class="section-head">
+          <div>
+            <h2>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              Storage Loading Matrix & What-If Simulator
+            </h2>
+            <div class="section-sub">Adjust offsets to see instant effects on towball downforce and axle weight transfer</div>
+          </div>
+        </div>
+
+        <!-- Water Tank Balancer Presets -->
+        <div class="water-balancer-box">
+          <h4>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            Water Ballast Presets (Dual 95L Tanks)
+          </h4>
+          <div class="balancer-pills">
+            <button class="balancer-btn" onclick="setWaterPreset('both-full')">💧 Both Full (190L)</button>
+            <button class="balancer-btn" onclick="setWaterPreset('front-full-rear-dry')">⬆ Front Full / Rear Dry (+Ball)</button>
+            <button class="balancer-btn" onclick="setWaterPreset('both-dry')">⚪ Both Dry (0L - Empty)</button>
+            <button class="balancer-btn" onclick="setWaterPreset('front-dry-rear-full')">⬇ Front Dry / Rear Full (-Ball)</button>
+          </div>
+        </div>
+
+        <!-- 8 Storage Zones Grid -->
+        <div class="storage-zones-grid">
+
+          <!-- 1. Toolbox (+3.75m) -->
+          <div id="card-toolbox" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">Toolbox / A-Frame</span>
+              <span class="lever-arm-tag front">+3.75 m</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-toolbox" class="zone-total-kg">0 kg</span>
+              <span class="zone-breakdown-sub">+0.75kg ball / kg</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-toolbox" type="range" class="hud-slider" min="-50" max="100" step="1" value="0">
+              <span id="offset-toolbox" class="slider-offset-display">0 kg</span>
+            </div>
+          </div>
+
+          <!-- 2. Front Storage / Tunnel Boot (+3.0m) -->
+          <div id="card-frontStorage" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">Tunnel Boot / Front Bed</span>
+              <span class="lever-arm-tag front">+3.00 m</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-frontStorage" class="zone-total-kg">0 kg</span>
+              <span class="zone-breakdown-sub">+0.60kg ball / kg</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-frontStorage" type="range" class="hud-slider" min="-50" max="100" step="1" value="0">
+              <span id="offset-frontStorage" class="slider-offset-display">0 kg</span>
+            </div>
+          </div>
+
+          <!-- 3. Front Water Tank (+1.8m) -->
+          <div id="card-frontTank" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">Front Water Tank</span>
+              <span class="lever-arm-tag front">+1.80 m</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-frontTank" class="zone-total-kg">0 kg</span>
+              <span class="zone-breakdown-sub">+0.36kg ball / kg</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-frontTank" type="range" class="hud-slider" min="-95" max="50" step="5" value="0">
+              <span id="offset-frontTank" class="slider-offset-display">0 kg</span>
+            </div>
+            <div class="quick-tank-bar">
+              <span style="font-size: 10px; color: var(--text-dim);">Quick Set:</span>
+              <div class="tank-btn-group">
+                <button class="tank-pill" onclick="setQuickTank('frontTank', 0)">0L</button>
+                <button class="tank-pill" onclick="setQuickTank('frontTank', 45)">45L</button>
+                <button class="tank-pill" onclick="setQuickTank('frontTank', 95)">95L</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Mid Internal Storage (0.0m) -->
+          <div id="card-midStorage" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">Mid Kitchen & Dining</span>
+              <span class="lever-arm-tag">0.00 m</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-midStorage" class="zone-total-kg">0 kg</span>
+              <span class="zone-breakdown-sub">Direct on Axles</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-midStorage" type="range" class="hud-slider" min="-50" max="100" step="1" value="0">
+              <span id="offset-midStorage" class="slider-offset-display">0 kg</span>
+            </div>
+          </div>
+
+          <!-- 5. Rear Water Tank (-1.5m) -->
+          <div id="card-rearTank" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">Rear Water Tank</span>
+              <span class="lever-arm-tag rear">-1.50 m</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-rearTank" class="zone-total-kg">0 kg</span>
+              <span class="zone-breakdown-sub">-0.30kg ball / kg</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-rearTank" type="range" class="hud-slider" min="-95" max="50" step="5" value="0">
+              <span id="offset-rearTank" class="slider-offset-display">0 kg</span>
+            </div>
+            <div class="quick-tank-bar">
+              <span style="font-size: 10px; color: var(--text-dim);">Quick Set:</span>
+              <div class="tank-btn-group">
+                <button class="tank-pill" onclick="setQuickTank('rearTank', 0)">0L</button>
+                <button class="tank-pill" onclick="setQuickTank('rearTank', 45)">45L</button>
+                <button class="tank-pill" onclick="setQuickTank('rearTank', 95)">95L</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6. Rear Storage Locker (-2.25m) -->
+          <div id="card-rearStorage" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">Rear Storage Locker</span>
+              <span class="lever-arm-tag rear">-2.25 m</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-rearStorage" class="zone-total-kg">0 kg</span>
+              <span class="zone-breakdown-sub">-0.45kg ball / kg</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-rearStorage" type="range" class="hud-slider" min="-50" max="100" step="1" value="0">
+              <span id="offset-rearStorage" class="slider-offset-display">0 kg</span>
+            </div>
+          </div>
+
+          <!-- 7. Vehicle Cabin (65% Front / 35% Rear) -->
+          <div id="card-cabin" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">Vehicle Cabin Cargo</span>
+              <span class="lever-arm-tag">Occupants</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-cabin" class="zone-total-kg">0 kg</span>
+              <span class="zone-breakdown-sub">65% Steer / 35% Drive</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-cabin" type="range" class="hud-slider" min="-50" max="150" step="5" value="0">
+              <span id="offset-cabin" class="slider-offset-display">0 kg</span>
+            </div>
+          </div>
+
+          <!-- 8. Vehicle Utility Tub (100% Rear Axle) -->
+          <div id="card-tub" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">Vehicle Utility Tub</span>
+              <span class="lever-arm-tag">Rear Axle</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-tub" class="zone-total-kg">0 kg</span>
+              <span class="zone-breakdown-sub">100% on Drive Axle</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-tub" type="range" class="hud-slider" min="-50" max="200" step="5" value="0">
+              <span id="offset-tub" class="slider-offset-display">0 kg</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Right: Telemetry Diagnostics & Intelligent Safety Advisor -->
+      <section class="card-panel">
+        <div class="section-head">
+          <div>
+            <h2>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Transport Compliance Checklist
+            </h2>
+            <div class="section-sub">7-Point Australian Legal Transport Limits</div>
+          </div>
+        </div>
+
+        <!-- 7-Point Compliance Cards -->
+        <div id="telemetry-checklist" class="telemetry-checklist-grid">
+          <!-- Dynamically populated from app.js -->
+        </div>
+
+        <!-- Intelligent Safety Advisor Engine -->
+        <div class="safety-advisor-card">
+          <div class="advisor-head">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Intelligent Stability Advisor
+          </div>
+          <div id="safety-advisor-list" class="advisor-list">
+            <!-- Dynamically populated from app.js -->
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Complete 78-Item Gear & Payload Inventory Section -->
+    <section class="inventory-section">
+      <div class="section-head">
+        <div>
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Itemized Gear & Payload Inventory
+          </h2>
+          <div class="section-sub">Toggle items to pack or unpack for your journey. Totals feed directly into the physics engine.</div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="hud-btn" onclick="openAddItemModal()">+ Add New Item</button>
+        </div>
+      </div>
+
+      <!-- Inventory Toolbar -->
+      <div class="inventory-toolbar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input id="inv-search-input" type="text" class="search-input" placeholder="Search gear (e.g. chainsaw, beer, gas, fridge)...">
+        </div>
+
+        <!-- Category Filter Tabs -->
+        <div class="inv-category-tabs">
+          <button class="inv-tab active" data-filter="all">All Items</button>
+          <button class="inv-tab" data-filter="vehicle">Tow Vehicle</button>
+          <button class="inv-tab" data-filter="van">Caravan Only</button>
+          <button class="inv-tab" data-filter="toolbox">Toolbox</button>
+          <button class="inv-tab" data-filter="frontStorage">Tunnel Boot</button>
+          <button class="inv-tab" data-filter="midStorage">Kitchen/Mid</button>
+          <button class="inv-tab" data-filter="rearStorage">Rear Storage</button>
+        </div>
+
+        <span id="inv-count-badge" class="brand-badge" style="background: rgba(255,255,255,0.06); border-color: var(--border-subtle); color: var(--text-main);">
+          0 Items
+        </span>
+      </div>
+
+      <!-- Inventory Table -->
+      <div class="inv-table-wrap">
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">Pack</th>
+              <th>Item Description</th>
+              <th>Storage Location</th>
+              <th>Base Weight</th>
+              <th>Travel Weight</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-table-body">
+            <!-- Dynamically populated from app.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Vehicle Specs Editor Modal -->
+  <div id="vehicle-modal" class="hud-modal-overlay">
+    <div class="hud-modal-card">
+      <div class="modal-header">
+        <h3>Tow Vehicle Specifications</h3>
+        <button class="modal-close-btn" onclick="closeModal('vehicle-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Vehicle Name / Model</label>
+          <input id="modal-veh-name" type="text" placeholder="e.g. Next-Gen Ranger">
+        </div>
+        <div class="modal-grid-2">
+          <div class="form-group">
+            <label>Tare Weight (kg)</label>
+            <input id="modal-veh-tare" type="number">
+          </div>
+          <div class="form-group">
+            <label>Maximum GVM Cap (kg)</label>
+            <input id="modal-veh-gvm" type="number">
+          </div>
+          <div class="form-group">
+            <label>Maximum GCM Cap (kg)</label>
+            <input id="modal-veh-gcm" type="number">
+          </div>
+          <div class="form-group">
+            <label>Towball Rating Max (kg)</label>
+            <input id="modal-veh-tbm" type="number">
+          </div>
+          <div class="form-group">
+            <label>Wheelbase Span (m)</label>
+            <input id="modal-veh-wb" type="number" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Towbar Overhang (m)</label>
+            <input id="modal-veh-oh" type="number" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Front Axle Baseline Tare (kg)</label>
+            <input id="modal-veh-fa-tare" type="number">
+          </div>
+          <div class="form-group">
+            <label>Rear Axle Baseline Tare (kg)</label>
+            <input id="modal-veh-ra-tare" type="number">
+          </div>
+          <div class="form-group">
+            <label>Max Front Axle Rating (kg)</label>
+            <input id="modal-veh-fa-max" type="number">
+          </div>
+          <div class="form-group">
+            <label>Max Rear Axle Rating (kg)</label>
+            <input id="modal-veh-ra-max" type="number">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="hud-btn" onclick="closeModal('vehicle-modal')">Cancel</button>
+        <button class="hud-btn primary" onclick="saveVehicleModal()">Save Vehicle Specs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Caravan Specs Editor Modal -->
+  <div id="caravan-modal" class="hud-modal-overlay">
+    <div class="hud-modal-card">
+      <div class="modal-header">
+        <h3>Caravan / Trailer Specifications</h3>
+        <button class="modal-close-btn" onclick="closeModal('caravan-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Caravan Name / Type</label>
+          <input id="modal-van-name" type="text" placeholder="e.g. Tandem Offroad Van">
+        </div>
+        <div class="modal-grid-2">
+          <div class="form-group">
+            <label>Caravan Unladen Tare (kg)</label>
+            <input id="modal-van-tare" type="number">
+          </div>
+          <div class="form-group">
+            <label>Factory Empty Tare TBM (kg)</label>
+            <input id="modal-van-tbm" type="number">
+          </div>
+          <div class="form-group">
+            <label>Maximum Legal ATM Cap (kg)</label>
+            <input id="modal-van-atm" type="number">
+          </div>
+          <div class="form-group">
+            <label>Caravan Max GTM Cap (kg)</label>
+            <input id="modal-van-gtm" type="number">
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label>Axle Center to Tow Hitch Distance L (m)</label>
+            <input id="modal-van-hitch" type="number" step="0.1">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="hud-btn" onclick="closeModal('caravan-modal')">Cancel</button>
+        <button class="hud-btn primary" onclick="saveCaravanModal()">Save Caravan Specs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New Inventory Item Modal -->
+  <div id="item-modal" class="hud-modal-overlay">
+    <div class="hud-modal-card">
+      <div class="modal-header">
+        <h3>Add Gear / Cargo Item</h3>
+        <button class="modal-close-btn" onclick="closeModal('item-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Item Name</label>
+          <input id="new-item-name" type="text" placeholder="e.g. E-Bikes on Drawbar">
+        </div>
+        <div class="modal-grid-2">
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input id="new-item-weight" type="number" step="0.1" placeholder="25">
+          </div>
+          <div class="form-group">
+            <label>Storage Location</label>
+            <select id="new-item-zone">
+              <option value="toolbox">Toolbox (+3.75m)</option>
+              <option value="frontStorage">Tunnel Boot (+3.0m)</option>
+              <option value="frontTank">Front Water Tank (+1.8m)</option>
+              <option value="midStorage">Mid Internal Storage (0.0m)</option>
+              <option value="rearTank">Rear Water Tank (-1.5m)</option>
+              <option value="rearStorage">Rear Storage (-2.25m)</option>
+              <option value="cabin">Vehicle Cabin</option>
+              <option value="tub">Vehicle Utility Tub</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="hud-btn" onclick="closeModal('item-modal')">Cancel</button>
+        <button class="hud-btn primary" onclick="saveNewItem()">Add to Inventory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  
+  <!-- Offline Service Worker Registration for Android App Mode -->
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Towing HUD Offline PWA Ready:', reg.scope))
+          .catch(err => console.warn('SW registration error:', err));
+      });
+    }
+  </script>
+</body>
+</html>
