@@ -349,18 +349,18 @@ function renderRigBlueprint(p) {
 
   // Front axle lift check (steering grip)
   const faDelta = faKg - p.vehicle.frontAxleTare;
-  const faGripText = faDelta < 0 ? `LIFT: ${faDelta}kg (LIGHT STEERING)` : `+${faDelta}kg Grip`;
+  const faGripText = faDelta < 0 ? `LIFT: ${faDelta}kg (LIGHT STEERING)` : `+${faDelta}kg Positive Grip`;
 
   svg.innerHTML = `
     <defs>
       <!-- Gradients -->
       <linearGradient id="bodyGradVeh" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#1e293b"/>
-        <stop offset="100%" stop-color="#0f172a"/>
+        <stop offset="100%" stop-color="#0b1120"/>
       </linearGradient>
       <linearGradient id="bodyGradVan" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#334155"/>
-        <stop offset="100%" stop-color="#1e293b"/>
+        <stop offset="100%" stop-color="#111827"/>
       </linearGradient>
       <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="3" result="blur" />
@@ -369,161 +369,231 @@ function renderRigBlueprint(p) {
           <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>
+      <!-- Arrow marker for TBM Downforce -->
+      <marker id="arrowDown" viewBox="0 0 10 10" refX="5" refY="10" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 0 L 5 10 z" fill="${tbmColor}"/>
+      </marker>
     </defs>
 
     <!-- Ground Level -->
-    <line x1="20" y1="230" x2="980" y2="230" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="6,4"/>
+    <line x1="20" y1="250" x2="1130" y2="250" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="8,5"/>
 
     <!-- ================= TOW VEHICLE ================= -->
     <g id="vehicle-group">
       <!-- Vehicle Body Silhouette -->
-      <path d="M 60,180 L 90,140 L 150,140 L 190,105 L 280,105 L 340,145 L 375,145 L 375,195 L 360,195 A 30,30 0 0,0 300,195 L 140,195 A 30,30 0 0,0 80,195 L 60,195 Z" 
+      <path d="M 70,200 L 95,160 L 165,160 L 210,120 L 305,120 L 315,165 L 440,165 L 440,222 L 420,222 A 38,38 0 0,0 340,222 L 170,222 A 38,38 0 0,0 90,222 L 70,222 Z" 
             fill="url(#bodyGradVeh)" stroke="#00f2fe" stroke-width="2"/>
       
       <!-- Windows -->
-      <path d="M 195,110 L 275,110 L 275,140 L 160,140 Z" fill="rgba(0, 242, 254, 0.15)" stroke="#00f2fe" stroke-width="1"/>
-      <path d="M 285,110 L 325,140 L 285,140 Z" fill="rgba(0, 242, 254, 0.1)" stroke="#00f2fe" stroke-width="1"/>
+      <path d="M 215,125 L 300,125 L 300,160 L 175,160 Z" fill="rgba(0, 242, 254, 0.15)" stroke="#00f2fe" stroke-width="1"/>
+      <path d="M 310,125 L 340,160 L 310,160 Z" fill="rgba(0, 242, 254, 0.1)" stroke="#00f2fe" stroke-width="1"/>
 
       <!-- Utility Tub Area -->
-      <rect x="290" y="145" width="80" height="40" fill="rgba(255,255,255,0.03)" stroke="rgba(0,242,254,0.3)" stroke-dasharray="3,3"/>
-      <text x="330" y="155" fill="#94a3b8" font-size="10" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
+      <rect x="320" y="168" width="115" height="46" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(0,242,254,0.3)" stroke-dasharray="4,3"/>
+      <text x="378" y="180" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
 
       <!-- Cabin Area -->
-      <text x="235" y="132" fill="#94a3b8" font-size="10" font-weight="700" text-anchor="middle">CABIN: ${Math.round(p.zones.cabin)}kg</text>
+      <text x="255" y="145" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">CABIN: ${Math.round(p.zones.cabin)}kg</text>
 
       <!-- Front Wheel (Steer) -->
-      <circle cx="110" cy="195" r="28" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
-      <circle cx="110" cy="195" r="14" fill="#1e293b" stroke="#00f2fe" stroke-width="2"/>
+      <circle cx="130" cy="222" r="30" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
+      <circle cx="130" cy="222" r="14" fill="#1e293b" stroke="#00f2fe" stroke-width="2"/>
 
       <!-- Rear Wheel (Drive) -->
-      <circle cx="330" cy="195" r="28" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
-      <circle cx="330" cy="195" r="14" fill="#1e293b" stroke="#00f2fe" stroke-width="2"/>
+      <circle cx="380" cy="222" r="30" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
+      <circle cx="380" cy="222" r="14" fill="#1e293b" stroke="#00f2fe" stroke-width="2"/>
 
       <!-- Wheelbase Span Line -->
-      <line x1="110" y1="210" x2="330" y2="210" stroke="#00f2fe" stroke-width="1.5"/>
-      <text x="220" y="206" fill="#00f2fe" font-size="11" font-family="Consolas, monospace" font-weight="700" text-anchor="middle">Wheelbase: ${p.vehicle.wheelbase}m</text>
+      <line x1="130" y1="238" x2="380" y2="238" stroke="#00f2fe" stroke-width="1.5"/>
+      <text x="255" y="234" fill="#00f2fe" font-size="11" font-family="Consolas, monospace" font-weight="700" text-anchor="middle">Wheelbase: ${p.vehicle.wheelbase}m</text>
 
       <!-- Overhang Line -->
-      <line x1="330" y1="210" x2="415" y2="210" stroke="#ffab00" stroke-width="1.5" stroke-dasharray="3,2"/>
-      <text x="372" y="223" fill="#ffab00" font-size="10" font-family="Consolas, monospace" font-weight="700" text-anchor="middle">OH: ${p.vehicle.overhang}m</text>
+      <line x1="380" y1="238" x2="490" y2="238" stroke="#ffab00" stroke-width="1.5" stroke-dasharray="3,2"/>
+      <text x="435" y="234" fill="#ffab00" font-size="10" font-family="Consolas, monospace" font-weight="700" text-anchor="middle">OH: ${p.vehicle.overhang}m</text>
 
-      <!-- Front Axle Load Callout -->
-      <g transform="translate(110, 240)">
-        <rect x="-65" y="5" width="130" height="42" rx="6" fill="#0f172a" stroke="${faColor}" stroke-width="1.5"/>
-        <text x="0" y="20" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">FRONT STEER AXLE</text>
-        <text x="0" y="34" fill="${faColor}" font-size="12" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${faKg} kg / ${p.vehicle.maxFrontAxle || '--'}kg</text>
-        <text x="0" y="44" fill="${faDelta < 0 ? '#ff1744' : '#00e676'}" font-size="8" font-weight="700" text-anchor="middle">${faGripText}</text>
+      <!-- Front Axle Load Callout (Spacious & Cleanly Placed) -->
+      <g transform="translate(130, 260)">
+        <rect x="-65" y="0" width="130" height="46" rx="6" fill="#0f172a" stroke="${faColor}" stroke-width="1.5"/>
+        <text x="0" y="14" fill="#94a3b8" font-size="9" font-weight="800" text-anchor="middle">FRONT STEER AXLE</text>
+        <text x="0" y="29" fill="${faColor}" font-size="12" font-family="Consolas, monospace" font-weight="900" text-anchor="middle">${faKg} kg / ${p.vehicle.maxFrontAxle || '--'}kg</text>
+        <text x="0" y="40" fill="${faDelta < 0 ? '#ff1744' : '#00e676'}" font-size="8" font-weight="700" text-anchor="middle">${faGripText}</text>
       </g>
 
-      <!-- Rear Axle Load Callout -->
-      <g transform="translate(330, 240)">
-        <rect x="-65" y="5" width="130" height="42" rx="6" fill="#0f172a" stroke="${raColor}" stroke-width="1.5"/>
-        <text x="0" y="20" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">REAR DRIVE AXLE</text>
-        <text x="0" y="34" fill="${raColor}" font-size="12" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${raKg} kg / ${p.vehicle.maxRearAxle || '--'}kg</text>
-        <text x="0" y="44" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">Cantilever: ${(1 + p.cantileverRatio).toFixed(2)}x</text>
+      <!-- Rear Axle Load Callout (Spacious & Cleanly Placed) -->
+      <g transform="translate(380, 260)">
+        <rect x="-65" y="0" width="130" height="46" rx="6" fill="#0f172a" stroke="${raColor}" stroke-width="1.5"/>
+        <text x="0" y="14" fill="#94a3b8" font-size="9" font-weight="800" text-anchor="middle">REAR DRIVE AXLE</text>
+        <text x="0" y="29" fill="${raColor}" font-size="12" font-family="Consolas, monospace" font-weight="900" text-anchor="middle">${raKg} kg / ${p.vehicle.maxRearAxle || '--'}kg</text>
+        <text x="0" y="40" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">Cantilever: ${(1 + p.cantileverRatio).toFixed(2)}x</text>
       </g>
     </g>
 
     <!-- Tow Hitch Receiver & Coupling -->
-    <rect x="375" y="185" width="40" height="8" fill="#475569"/>
+    <rect x="440" y="210" width="50" height="8" fill="#475569" rx="2"/>
+    
     <!-- Tow Ball Pivot -->
-    <circle cx="415" cy="189" r="7" fill="#f8fafc" stroke="#ffab00" stroke-width="2" filter="url(#neonGlow)"/>
+    <circle cx="490" cy="214" r="8" fill="#f8fafc" stroke="#ffab00" stroke-width="2.5" filter="url(#neonGlow)"/>
 
-    <!-- Towball Downforce Vector -->
-    <path d="M 415,160 L 415,180" stroke="${tbmColor}" stroke-width="3" marker-end="url(#arrow)"/>
-    <g transform="translate(415, 115)">
-      <rect x="-55" y="0" width="110" height="38" rx="6" fill="#0f172a" stroke="${tbmColor}" stroke-width="1.5"/>
-      <text x="0" y="14" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">TOWBALL DOWNLOAD</text>
-      <text x="0" y="28" fill="${tbmColor}" font-size="13" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${tbmKg} kg (${p.tbmPercent.toFixed(1)}%)</text>
+    <!-- ================= TOWBALL (TBM) DOWNFORCE HUD AREA (RAISED HIGH & UNCLUTTERED) ================= -->
+    <g id="tbm-callout-area">
+      <!-- TBM Digital Telemetry Card (Raised to Y=12 to give maximum clearance above the drawbar & toolbox) -->
+      <g transform="translate(490, 12)">
+        <rect x="-80" y="0" width="160" height="52" rx="8" fill="#070c18" stroke="${tbmColor}" stroke-width="2" filter="url(#neonGlow)"/>
+        <text x="0" y="16" fill="#94a3b8" font-size="9" font-weight="800" text-anchor="middle" letter-spacing="1">TOWBALL DOWNLOAD</text>
+        <text x="0" y="34" fill="${tbmColor}" font-size="14" font-family="Consolas, monospace" font-weight="900" text-anchor="middle">${tbmKg} kg (${p.tbmPercent.toFixed(1)}%)</text>
+        <text x="0" y="46" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">Max Cap: ${p.vehicle.maxTbm}kg | ${p.margins.tbm >= 0 ? '+' + Math.round(p.margins.tbm) + 'kg' : Math.round(p.margins.tbm) + 'kg'}</text>
+      </g>
+
+      <!-- Clean Long Neon Downforce Arrow pointing straight down onto the towball (490, 214) -->
+      <line x1="490" y1="66" x2="490" y2="204" stroke="${tbmColor}" stroke-width="2.5" stroke-dasharray="6,3" marker-end="url(#arrowDown)"/>
+      
+      <!-- Downforce Vector Badge (Placed high at Y=100, well above toolbox) -->
+      <g transform="translate(490, 102)">
+        <rect x="-38" y="-9" width="76" height="18" rx="9" fill="#0f172a" stroke="${tbmColor}" stroke-width="1.2"/>
+        <text x="0" y="4" fill="${tbmColor}" font-size="8" font-weight="800" text-anchor="middle">↓ DOWNFORCE</text>
+      </g>
     </g>
 
     <!-- ================= CARAVAN ================= -->
     <g id="caravan-group">
       <!-- Drawbar Triangle Hitch -->
-      <line x1="415" y1="189" x2="490" y2="175" stroke="#94a3b8" stroke-width="4"/>
-      <line x1="415" y1="189" x2="490" y2="195" stroke="#94a3b8" stroke-width="4"/>
+      <line x1="490" y1="214" x2="600" y2="195" stroke="#94a3b8" stroke-width="4"/>
+      <line x1="490" y1="214" x2="600" y2="218" stroke="#94a3b8" stroke-width="4"/>
 
-      <!-- Caravan Main Body -->
-      <path d="M 490,110 Q 510,95 560,95 L 890,95 Q 920,95 920,125 L 920,195 A 35,35 0 0,0 790,195 L 710,195 A 35,35 0 0,0 650,195 L 490,195 Z" 
+      <!-- Roof Air Conditioner Pod -->
+      <rect x="815" y="83" width="70" height="12" rx="3" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <line x1="825" y1="89" x2="875" y2="89" stroke="#64748b" stroke-width="1" stroke-dasharray="3,2"/>
+
+      <!-- Caravan Main Body (Authentic Aussie Offroad/Touring Design - No Ugly Rear Arch!) -->
+      <path d="M 600,218 
+               Q 615,145 640,112 
+               Q 660,95 685,95 
+               L 1035,95 
+               Q 1055,95 1055,115 
+               L 1055,195 
+               L 1035,218 
+               L 925,218 
+               Q 925,186 910,186 
+               L 790,186 
+               Q 775,186 775,218 
+               L 600,218 Z" 
             fill="url(#bodyGradVan)" stroke="#38bdf8" stroke-width="2"/>
 
-      <!-- Caravan Windows / Graphics -->
-      <rect x="580" y="110" width="70" height="35" rx="4" fill="rgba(56, 189, 248, 0.2)" stroke="#38bdf8" stroke-width="1"/>
-      <rect x="800" y="110" width="80" height="35" rx="4" fill="rgba(56, 189, 248, 0.2)" stroke="#38bdf8" stroke-width="1"/>
+      <!-- Lower Checkerplate Protective Skirt (Front and Rear of Wheels) -->
+      <path d="M 600,218 L 610,186 L 775,186 L 775,218 Z" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1"/>
+      <path d="M 925,218 L 925,186 L 1035,186 L 1035,218 Z" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1"/>
+
+      <!-- Modern Tinted Double-Glazed Windows -->
+      <rect x="665" y="108" width="78" height="38" rx="4" fill="rgba(56, 189, 248, 0.18)" stroke="#38bdf8" stroke-width="1.2"/>
+      <rect x="935" y="108" width="92" height="38" rx="4" fill="rgba(56, 189, 248, 0.18)" stroke="#38bdf8" stroke-width="1.2"/>
       
-      <!-- Caravan Door -->
-      <rect x="680" y="110" width="40" height="85" rx="2" fill="none" stroke="#64748b" stroke-width="1.5"/>
+      <!-- Caravan Main Entry Door -->
+      <rect x="785" y="108" width="45" height="106" rx="2" fill="rgba(255, 255, 255, 0.02)" stroke="#64748b" stroke-width="1.5"/>
+      <rect x="793" y="118" width="28" height="32" rx="2" fill="rgba(56, 189, 248, 0.12)" stroke="#64748b" stroke-width="1"/>
+      <circle cx="792" cy="165" r="2.5" fill="#00f2fe"/>
 
-      <!-- Caravan Tandem / Single Wheels (Axle Center at X=720) -->
-      <circle cx="685" cy="195" r="28" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
-      <circle cx="685" cy="195" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+      <!-- Dynamic Modern Side Accent Graphic -->
+      <path d="M 645,158 L 760,158 L 748,166 L 635,166 Z" fill="rgba(0, 242, 254, 0.2)"/>
+      <path d="M 935,158 L 1030,158 L 1020,166 L 925,166 Z" fill="rgba(0, 242, 254, 0.2)"/>
 
-      <circle cx="755" cy="195" r="28" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
-      <circle cx="755" cy="195" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+      <!-- Rear Heavy-Duty Bumper Bar -->
+      <rect x="1055" y="204" width="22" height="12" rx="2" fill="#334155" stroke="#64748b" stroke-width="1.5"/>
+
+      <!-- Rear Mounted Spare Tyre (Iconic Aussie Tourer Detail) -->
+      <circle cx="1075" cy="172" r="22" fill="#0b0f19" stroke="#475569" stroke-width="3.5"/>
+      <circle cx="1075" cy="172" r="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+      <line x1="1055" y1="180" x2="1075" y2="180" stroke="#64748b" stroke-width="3"/>
+
+      <!-- Caravan Tandem Wheels (Axle Center at X=850) -->
+      <circle cx="815" cy="222" r="30" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
+      <circle cx="815" cy="222" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+
+      <circle cx="885" cy="222" r="30" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
+      <circle cx="885" cy="222" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
 
       <!-- Axle Center Fulcrum (Pivot point for moment arms) -->
-      <line x1="720" y1="85" x2="720" y2="230" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>
-      <polygon points="720,230 714,242 726,242" fill="#00f2fe"/>
-      <text x="720" y="80" fill="#00f2fe" font-size="10" font-weight="700" text-anchor="middle">AXLE CENTER (0.0m)</text>
+      <line x1="850" y1="75" x2="850" y2="250" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <polygon points="850,250 844,260 856,260" fill="#00f2fe"/>
+      <text x="850" y="70" fill="#00f2fe" font-size="10" font-weight="700" text-anchor="middle">AXLE FULCRUM (0.0m)</text>
 
       <!-- Hitch Distance Line L -->
-      <line x1="415" y1="210" x2="720" y2="210" stroke="#38bdf8" stroke-width="1.5"/>
-      <text x="567" y="206" fill="#38bdf8" font-size="11" font-family="Consolas, monospace" font-weight="700" text-anchor="middle">Hitch Distance (L): ${p.caravan.hitchDist}m</text>
+      <line x1="490" y1="238" x2="850" y2="238" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="670" y="234" fill="#38bdf8" font-size="11" font-family="Consolas, monospace" font-weight="700" text-anchor="middle">Hitch Distance (L): ${p.caravan.hitchDist}m</text>
 
       <!-- Ground Axle GTM Load Callout -->
-      <g transform="translate(720, 245)">
-        <rect x="-65" y="0" width="130" height="38" rx="6" fill="#0f172a" stroke="${gtmColor}" stroke-width="1.5"/>
-        <text x="0" y="14" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">CARAVAN TYRES (GTM)</text>
-        <text x="0" y="28" fill="${gtmColor}" font-size="12" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${gtmKg} kg / ${p.caravan.maxGtm || '--'}kg</text>
+      <g transform="translate(850, 260)">
+        <rect x="-70" y="0" width="140" height="46" rx="6" fill="#0f172a" stroke="${gtmColor}" stroke-width="1.5"/>
+        <text x="0" y="14" fill="#94a3b8" font-size="9" font-weight="800" text-anchor="middle">CARAVAN TYRES (GTM)</text>
+        <text x="0" y="29" fill="${gtmColor}" font-size="12" font-family="Consolas, monospace" font-weight="900" text-anchor="middle">${gtmKg} kg / ${p.caravan.maxGtm || '--'}kg</text>
+        <text x="0" y="40" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">ATM: ${Math.round(p.trailerATM)} kg</text>
       </g>
 
-      <!-- ================= STORAGE ZONE PINS ================= -->
-      <!-- Toolbox (+3.75m) ~ X=465 -->
-      <g transform="translate(465, 140)" class="pin-node" onclick="focusZone('toolbox')">
-        <circle cx="0" cy="0" r="12" fill="#0f172a" stroke="#00e676" stroke-width="2"/>
-        <text x="0" y="4" fill="#00e676" font-size="10" font-weight="800" text-anchor="middle">TB</text>
-        <text x="0" y="-16" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">+3.75m</text>
-        <text x="0" y="24" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.toolbox)}kg</text>
+      <!-- ================= STORAGE ZONE PINS (UNCLUTTERED & STAGGERED) ================= -->
+      
+      <!-- Toolbox (+3.75m) on Drawbar -->
+      <g transform="translate(565, 168)" class="pin-node" onclick="focusZone('toolbox')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#00e676" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#00e676" font-size="9" font-weight="900" text-anchor="middle">TB</text>
+        <g transform="translate(0, 18)">
+          <rect x="-42" y="0" width="84" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#00e676" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">+3.75m Drawbar</text>
+          <text x="0" y="20" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.toolbox)} kg</text>
+        </g>
       </g>
 
-      <!-- Front Storage (+3.0m) ~ X=520 -->
-      <g transform="translate(520, 160)" class="pin-node" onclick="focusZone('frontStorage')">
-        <circle cx="0" cy="0" r="12" fill="#0f172a" stroke="#00e676" stroke-width="2"/>
-        <text x="0" y="4" fill="#00e676" font-size="10" font-weight="800" text-anchor="middle">FS</text>
-        <text x="0" y="-16" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">+3.0m</text>
-        <text x="0" y="24" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.frontStorage)}kg</text>
+      <!-- Front Storage / Tunnel Boot (+3.0m) -->
+      <g transform="translate(670, 138)" class="pin-node" onclick="focusZone('frontStorage')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#00e676" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#00e676" font-size="9" font-weight="900" text-anchor="middle">FS</text>
+        <g transform="translate(0, 18)">
+          <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#00e676" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">+3.0m Boot</text>
+          <text x="0" y="20" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.frontStorage)} kg</text>
+        </g>
       </g>
 
-      <!-- Front Tank (+1.8m) ~ X=600 -->
-      <g transform="translate(600, 175)" class="pin-node" onclick="focusZone('frontTank')">
-        <circle cx="0" cy="0" r="12" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
-        <text x="0" y="4" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle">FW</text>
-        <text x="0" y="-16" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">+1.8m</text>
-        <text x="0" y="24" fill="#38bdf8" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.frontTank)}L</text>
+      <!-- Front Water Tank (+1.8m) -->
+      <g transform="translate(745, 180)" class="pin-node" onclick="focusZone('frontTank')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#38bdf8" font-size="9" font-weight="900" text-anchor="middle">FW</text>
+        <g transform="translate(0, 18)">
+          <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#38bdf8" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">+1.8m Tank</text>
+          <text x="0" y="20" fill="#38bdf8" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.frontTank)} L</text>
+        </g>
       </g>
 
-      <!-- Mid Storage (0.0m) ~ X=720 -->
-      <g transform="translate(720, 140)" class="pin-node" onclick="focusZone('midStorage')">
-        <circle cx="0" cy="0" r="12" fill="#0f172a" stroke="#a855f7" stroke-width="2"/>
-        <text x="0" y="4" fill="#a855f7" font-size="9" font-weight="800" text-anchor="middle">MID</text>
-        <text x="0" y="-16" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">0.0m</text>
-        <text x="0" y="24" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.midStorage)}kg</text>
+      <!-- Mid Internal Storage (0.0m) -->
+      <g transform="translate(850, 125)" class="pin-node" onclick="focusZone('midStorage')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#a855f7" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#a855f7" font-size="8" font-weight="900" text-anchor="middle">MID</text>
+        <g transform="translate(0, 18)">
+          <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#a855f7" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">0.0m Axle</text>
+          <text x="0" y="20" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.midStorage)} kg</text>
+        </g>
       </g>
 
-      <!-- Rear Tank (-1.5m) ~ X=800 -->
-      <g transform="translate(800, 175)" class="pin-node" onclick="focusZone('rearTank')">
-        <circle cx="0" cy="0" r="12" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
-        <text x="0" y="4" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle">RW</text>
-        <text x="0" y="-16" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">-1.5m</text>
-        <text x="0" y="24" fill="#38bdf8" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.rearTank)}L</text>
+      <!-- Rear Water Tank (-1.5m) -->
+      <g transform="translate(950, 180)" class="pin-node" onclick="focusZone('rearTank')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#38bdf8" font-size="9" font-weight="900" text-anchor="middle">RW</text>
+        <g transform="translate(0, 18)">
+          <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#38bdf8" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">-1.5m Tank</text>
+          <text x="0" y="20" fill="#38bdf8" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.rearTank)} L</text>
+        </g>
       </g>
 
-      <!-- Rear Storage (-2.25m) ~ X=860 -->
-      <g transform="translate(860, 150)" class="pin-node" onclick="focusZone('rearStorage')">
-        <circle cx="0" cy="0" r="12" fill="#0f172a" stroke="#ffab00" stroke-width="2"/>
-        <text x="0" y="4" fill="#ffab00" font-size="9" font-weight="800" text-anchor="middle">RS</text>
-        <text x="0" y="-16" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">-2.25m</text>
-        <text x="0" y="24" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.rearStorage)}kg</text>
+      <!-- Rear Storage Locker (-2.25m) -->
+      <g transform="translate(1015, 138)" class="pin-node" onclick="focusZone('rearStorage')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#ffab00" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#ffab00" font-size="9" font-weight="900" text-anchor="middle">RS</text>
+        <g transform="translate(0, 18)">
+          <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#ffab00" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">-2.25m Rear</text>
+          <text x="0" y="20" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.rearStorage)} kg</text>
+        </g>
       </g>
     </g>
   `;
