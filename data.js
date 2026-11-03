@@ -64,7 +64,7 @@
                          "gcm":  6400,
                          "maxTbm":  350,
                          "wheelbase":  3.27,
-                         "overhang":  1.31,
+                         "overhang":  1.36,
                          "rearAxleTare":  1044,
                          "frontAxleTare":  1301,
                          "maxRearAxle":  1959,
