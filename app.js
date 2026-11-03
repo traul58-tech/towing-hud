@@ -386,7 +386,7 @@ function renderRigBlueprint(p) {
 
       <!-- Utility Tub Area -->
       <rect x="290" y="145" width="80" height="40" fill="rgba(255,255,255,0.03)" stroke="rgba(0,242,254,0.3)" stroke-dasharray="3,3"/>
-      <text x="330" y="168" fill="#94a3b8" font-size="10" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
+      <text x="330" y="155" fill="#94a3b8" font-size="10" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
 
       <!-- Cabin Area -->
       <text x="235" y="132" fill="#94a3b8" font-size="10" font-weight="700" text-anchor="middle">CABIN: ${Math.round(p.zones.cabin)}kg</text>
