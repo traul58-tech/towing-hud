@@ -1,4 +1,4 @@
-const CACHE_NAME = 'towing-hud-v1';
+const CACHE_NAME = 'towing-hud-v2';
 const ASSETS = [
   './',
   './index.html',
