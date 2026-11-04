@@ -283,74 +283,9 @@ function updateTelemetry() {
   // Update Dynamic Rig SVG Schematic
   renderRigBlueprint(p);
 
-  // Update Photo View Telemetry Dock and photo overlay
+  // Update Photo View Telemetry Dock
   renderPhotoTelemetryDock(p);
-  renderPhotoOverlay(p);
-function renderPhotoOverlay(p) {
-  const overlay = document.getElementById('photo-data-overlay');
-  const img = document.getElementById('rig-photo-img');
 
-  if (!overlay || !img || !img.naturalWidth || !img.naturalHeight) return;
-
-  const width = img.naturalWidth;
-  const height = img.naturalHeight;
-  overlay.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  overlay.setAttribute('preserveAspectRatio', 'none');
-
-  // Approximate locations for a side-on photo like the one you shared.
-  const markers = [
-    {
-      x: 0.09, y: 0.69, labelY: 0.40,
-      title: 'FRONT AXLE',
-      value: `${Math.round(p.frontAxleLoad).toLocaleString()} kg`,
-      status: p.status.frontAxle
-    },
-    {
-      x: 0.31, y: 0.70, labelY: 0.48,
-      title: 'REAR AXLE',
-      value: `${Math.round(p.rearAxleLoad).toLocaleString()} kg`,
-      status: p.status.rearAxle
-    },
-    {
-      x: 0.39, y: 0.65, labelY: 0.32,
-      title: 'TOWBALL',
-      value: `${Math.round(p.tbm).toLocaleString()} kg · ${p.tbmPercent.toFixed(1)}%`,
-      status: p.status.tbm
-    },
-    {
-      x: 0.73, y: 0.70, labelY: 0.42,
-      title: 'CARAVAN AXLES (GTM)',
-      value: `${Math.round(p.trailerGTM).toLocaleString()} kg`,
-      status: p.status.gtm
-    }
-  ];
-
-  const colors = {
-    pass: '#00e676',
-    warn: '#ffab00',
-    fail: '#ff1744'
-  };
-
-  overlay.innerHTML = markers.map(marker => {
-    const x = marker.x * width;
-    const y = marker.y * height;
-    const labelY = marker.labelY * height;
-    const color = colors[marker.status] || colors.warn;
-
-    return `
-      <g>
-        <line
-          class="photo-overlay-line"
-          x1="${x}" y1="${labelY + 34}"
-          x2="${x}" y2="${y - 10}"
-          stroke="${color}"/>
-        <circle cx="${x}" cy="${y}" r="12" fill="${color}" stroke="#fff" stroke-width="4"/>
-        <text class="photo-overlay-title" x="${x}" y="${labelY}" text-anchor="middle">${marker.title}</text>
-        <text class="photo-overlay-label" x="${x}" y="${labelY + 28}" text-anchor="middle">${marker.value}</text>
-      </g>
-    `;
-  }).join('');
-}
   // Update Storage Controls Display
   updateStorageCards(p);
 
@@ -455,7 +390,7 @@ function renderRigBlueprint(p) {
 
       <!-- Utility Tub Area -->
       <rect x="320" y="168" width="115" height="46" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(0,242,254,0.3)" stroke-dasharray="4,3"/>
-      <text x="378" y="160" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
+      <text x="378" y="195" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
 
       <!-- Cabin Area -->
       <text x="255" y="145" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">CABIN: ${Math.round(p.zones.cabin)}kg</text>
@@ -1104,7 +1039,6 @@ function setRigViewMode(mode) {
 function updateRigViewDisplay() {
   const svgEl = document.getElementById('rig-blueprint-svg');
   const photoContainer = document.getElementById('rig-photo-container');
-  const stage = document.getElementById('rig-photo-stage');
   const imgEl = document.getElementById('rig-photo-img');
   const dropzone = document.getElementById('photo-empty-dropzone');
   const removeBtn = document.getElementById('btn-remove-photo');
@@ -1119,21 +1053,16 @@ function updateRigViewDisplay() {
   if (state.rigViewMode === 'photo') {
     if (svgEl) svgEl.style.display = 'none';
     if (photoContainer) photoContainer.style.display = 'flex';
-
+    
     if (state.rigPhotoUrl) {
-      if (stage) stage.style.display = 'block';
       if (imgEl) {
-        imgEl.onload = () => renderPhotoOverlay(computePhysics());
-        if (imgEl.getAttribute('src') !== state.rigPhotoUrl) {
-          imgEl.src = state.rigPhotoUrl;
-        } else if (imgEl.complete && imgEl.naturalWidth) {
-          renderPhotoOverlay(computePhysics());
-        }
+        imgEl.src = state.rigPhotoUrl;
+        imgEl.style.display = 'block';
       }
       if (dropzone) dropzone.style.display = 'none';
       if (removeBtn) removeBtn.style.display = 'inline-flex';
     } else {
-      if (stage) stage.style.display = 'none';
+      if (imgEl) imgEl.style.display = 'none';
       if (dropzone) dropzone.style.display = 'flex';
       if (removeBtn) removeBtn.style.display = 'none';
     }
@@ -1143,6 +1072,7 @@ function updateRigViewDisplay() {
     if (removeBtn) removeBtn.style.display = state.rigPhotoUrl ? 'inline-flex' : 'none';
   }
 }
+
 function handleRigPhotoUpload(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
