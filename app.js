@@ -390,7 +390,7 @@ function renderRigBlueprint(p) {
 
       <!-- Utility Tub Area -->
       <rect x="320" y="168" width="115" height="46" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(0,242,254,0.3)" stroke-dasharray="4,3"/>
-      <text x="378" y="160" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
+      <text x="378" y="180" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
 
       <!-- Cabin Area -->
       <text x="255" y="145" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">CABIN: ${Math.round(p.zones.cabin)}kg</text>
@@ -1023,12 +1023,15 @@ function initRigView() {
     testImg.onload = function() {
       state.rigPhotoUrl = 'rig.jpg';
       updateRigViewDisplay();
+   const overlay = document.getElementById('photo-data-overlay');
+   if (overlay) {
+   overlay.style.display = state.rigViewMode === 'photo' && state.rigPhotoUrl ? 'block' : 'none';
+  }
     };
     testImg.src = 'rig.jpg';
   }
   updateRigViewDisplay();
 }
-
 function setRigViewMode(mode) {
   state.rigViewMode = mode;
   updateRigViewDisplay();
@@ -1040,11 +1043,18 @@ function updateRigViewDisplay() {
   const svgEl = document.getElementById('rig-blueprint-svg');
   const photoContainer = document.getElementById('rig-photo-container');
   const imgEl = document.getElementById('rig-photo-img');
+  const overlay = document.getElementById('photo-data-overlay'); // Add this
   const dropzone = document.getElementById('photo-empty-dropzone');
   const removeBtn = document.getElementById('btn-remove-photo');
   const btnBlueprint = document.getElementById('btn-view-blueprint');
   const btnPhoto = document.getElementById('btn-view-photo');
+  const overlay = document.getElementById('photo-data-overlay');
+  if (overlay) {
+    overlay.style.display = state.rigViewMode === 'photo' && state.rigPhotoUrl ? 'block' : 'none';;
+  }
 
+  // Keep the rest of the existing function below this point.
+  // Keep the rest of the existing function below this point.
   if (btnBlueprint && btnPhoto) {
     btnBlueprint.classList.toggle('active', state.rigViewMode === 'blueprint');
     btnPhoto.classList.toggle('active', state.rigViewMode === 'photo');
