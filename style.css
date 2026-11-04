@@ -667,45 +667,6 @@ body.daylight-mode .rig-photo-viewport {
   transition: filter 0.3s ease;
 }
 
-#rig-photo-img {
-  /* existing rules stay here */
-}
-
-/* Add the overlay rules here, before Photo Empty Dropzone */
-.photo-data-overlay {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: none;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.photo-overlay-label {
-  fill: #f8fafc;
-  font: 800 13px Consolas, monospace;
-  paint-order: stroke;
-  stroke: rgba(15, 23, 42, 0.9);
-  stroke-width: 4px;
-  stroke-linejoin: round;
-}
-
-.photo-overlay-title {
-  fill: #e2e8f0;
-  font: 700 10px 'Segoe UI', sans-serif;
-  paint-order: stroke;
-  stroke: rgba(15, 23, 42, 0.9);
-  stroke-width: 3px;
-  stroke-linejoin: round;
-}
-
-.photo-overlay-line {
-  stroke-width: 2;
-  stroke-dasharray: 4 3;
-}
-
-/* Photo Empty Dropzone */
 /* Photo Empty Dropzone */
 .photo-empty-dropzone {
   display: flex;
