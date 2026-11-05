@@ -226,6 +226,7 @@ function computePhysics() {
     vehicle,
     caravan,
     zones,
+    storage: zones, // alias so both p.zones and p.storage work safely
     baseWeights,
     caravanCargoTotal,
     momentsSum,
@@ -1053,6 +1054,13 @@ const DEFAULT_PHOTO_POSITIONS = {
 function getPhotoPositions() {
   if (!state.photoPositions) {
     state.photoPositions = JSON.parse(JSON.stringify(DEFAULT_PHOTO_POSITIONS));
+  } else {
+    // Ensure all default keys exist if state was saved with an older schema
+    for (const key in DEFAULT_PHOTO_POSITIONS) {
+      if (!state.photoPositions[key]) {
+        state.photoPositions[key] = { ...DEFAULT_PHOTO_POSITIONS[key] };
+      }
+    }
   }
   return state.photoPositions;
 }
@@ -1097,6 +1105,11 @@ function updateRigViewDisplay() {
   if (photoControls) {
     photoControls.style.display = state.rigViewMode === 'photo' ? 'flex' : 'none';
   }
+
+  const pinBtn = document.getElementById('btn-toggle-pins');
+  if (pinBtn) pinBtn.classList.toggle('active', !!state.photoOverlay.showPins);
+  const dimsBtn = document.getElementById('btn-toggle-dims');
+  if (dimsBtn) dimsBtn.classList.toggle('active', !!state.photoOverlay.showDimensions);
 
   if (state.rigViewMode === 'photo') {
     if (svgEl) svgEl.style.display = 'none';
@@ -1224,21 +1237,33 @@ function setupOverlayDragging() {
   function getSvgPoint(e) {
     const rect = overlay.getBoundingClientRect();
     if (!rect.width || !rect.height) return { x: 500, y: 250 };
-    const x = Math.round(Math.max(15, Math.min(985, ((e.clientX - rect.left) / rect.width) * 1000)));
-    const y = Math.round(Math.max(15, Math.min(485, ((e.clientY - rect.top) / rect.height) * 500)));
+    const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+    const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+    const x = Math.round(Math.max(15, Math.min(985, ((clientX - rect.left) / rect.width) * 1000)));
+    const y = Math.round(Math.max(15, Math.min(485, ((clientY - rect.top) / rect.height) * 500)));
     return { x, y };
   }
 
   overlay.addEventListener('pointerdown', (e) => {
-    if (!state.photoOverlay.calibrating) return;
+    if (!state.photoOverlay.calibrating) {
+      // If not in calibration mode, clicking a storage pin focuses that compartment's slider card
+      const target = e.target.closest('[data-drag-id]');
+      if (target) {
+        const id = target.getAttribute('data-drag-id');
+        if (id && id !== 'frontAxle' && id !== 'rearAxle' && id !== 'tbm' && id !== 'caravanAxle') {
+          onOverlayPinClick(id);
+        }
+      }
+      return;
+    }
     const target = e.target.closest('[data-drag-id]');
     if (!target) return;
     activeDragId = target.getAttribute('data-drag-id');
-    overlay.setPointerCapture(e.pointerId);
+    try { overlay.setPointerCapture(e.pointerId); } catch (_) {}
     e.preventDefault();
   });
 
-  overlay.addEventListener('pointermove', (e) => {
+  window.addEventListener('pointermove', (e) => {
     if (!activeDragId || !state.photoOverlay.calibrating) return;
     const pt = getSvgPoint(e);
     const pos = getPhotoPositions();
@@ -1257,8 +1282,14 @@ function setupOverlayDragging() {
     }
   }
 
-  overlay.addEventListener('pointerup', stopDrag);
-  overlay.addEventListener('pointercancel', stopDrag);
+  window.addEventListener('pointerup', stopDrag);
+  window.addEventListener('pointercancel', stopDrag);
+}
+
+function onOverlayPinClick(id) {
+  if (state.photoOverlay.calibrating) return;
+  focusZone(id);
+  playBlip();
 }
 
 function toggleOverlayCalibration() {
@@ -1466,32 +1497,43 @@ function renderPhotoOverlay(p) {
 
   // 6. Storage Compartment Pins (if enabled)
   if (state.photoOverlay.showPins) {
+    const z = (p && (p.zones || p.storage)) || {};
     const pins = [
-      { id: 'cabin', code: 'CAB', label: 'Cabin', kg: p.storage.cabin, stroke: '#38bdf8' },
-      { id: 'tub', code: 'TUB', label: 'Tub/Tray', kg: p.storage.tub, stroke: '#38bdf8' },
-      { id: 'toolbox', code: 'TB', label: 'Toolbox', kg: p.storage.toolbox, stroke: '#f59e0b' },
-      { id: 'frontStorage', code: 'FS', label: 'Tunnel Boot', kg: p.storage.frontStorage, stroke: '#a78bfa' },
-      { id: 'frontTank', code: 'FW', label: 'Front Tank', kg: p.storage.frontTank, stroke: '#06b6d4' },
-      { id: 'midStorage', code: 'MID', label: 'Mid/Pantry', kg: p.storage.midStorage, stroke: '#a78bfa' },
-      { id: 'rearTank', code: 'RW', label: 'Rear Tank', kg: p.storage.rearTank, stroke: '#06b6d4' },
-      { id: 'rearStorage', code: 'RS', label: 'Rear Storage', kg: p.storage.rearStorage, stroke: '#f43f5e' }
+      { id: 'cabin', code: 'CAB', label: 'Cabin Occupants & Gear', kg: Math.round(z.cabin || 0), stroke: '#38bdf8' },
+      { id: 'tub', code: 'TUB', label: 'Tub / Tray Cargo', kg: Math.round(z.tub || 0), stroke: '#38bdf8' },
+      { id: 'toolbox', code: 'TB', label: 'Drawbar Toolbox', kg: Math.round(z.toolbox || 0), stroke: '#00e676' },
+      { id: 'frontStorage', code: 'FS', label: 'Tunnel Boot', kg: Math.round(z.frontStorage || 0), stroke: '#00e676' },
+      { id: 'frontTank', code: 'FW', label: 'Front Water Tank', kg: Math.round(z.frontTank || 0), stroke: '#38bdf8', isWater: true },
+      { id: 'midStorage', code: 'MID', label: 'Mid Internal / Pantry', kg: Math.round(z.midStorage || 0), stroke: '#a855f7' },
+      { id: 'rearTank', code: 'RW', label: 'Rear Water Tank', kg: Math.round(z.rearTank || 0), stroke: '#38bdf8', isWater: true },
+      { id: 'rearStorage', code: 'RS', label: 'Rear Bumper / Lockers', kg: Math.round(z.rearStorage || 0), stroke: '#f59e0b' }
     ];
 
     pins.forEach(pin => {
       const pt = pos[pin.id] || DEFAULT_PHOTO_POSITIONS[pin.id];
       if (!pt) return;
-      const pillW = 68;
-      const pillH = 22;
+      const pillW = 76;
+      const pillH = 26;
       const pillX = pt.x - pillW / 2;
       const pillY = pt.y - pillH / 2;
+      const unit = pin.isWater ? 'L' : 'kg';
 
       html += `
-        <g class="overlay-node ${isCalibrating ? 'calibrating' : ''}" data-drag-id="${pin.id}">
+        <g class="overlay-node ${isCalibrating ? 'calibrating' : ''}" data-drag-id="${pin.id}" onclick="onOverlayPinClick('${pin.id}')" style="cursor: pointer;">
+          <title>${pin.label}: ${pin.kg} ${unit} (Click to scroll to slider)</title>
+          
+          <!-- Anchor leader stem / dot -->
+          <circle cx="${pt.x}" cy="${pt.y + 16}" r="3.5" fill="${pin.stroke}" />
+          <line x1="${pt.x}" y1="${pillY + pillH}" x2="${pt.x}" y2="${pt.y + 16}" stroke="${pin.stroke}" stroke-width="1.5" stroke-dasharray="2 2" />
+
           <!-- Glow tag pill -->
-          <rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="11" fill="rgba(10, 15, 29, 0.9)" stroke="${pin.stroke}" stroke-width="1.8" />
-          <text x="${pt.x}" y="${pt.y + 4}" text-anchor="middle" fill="#f8fafc" font-size="9.5" font-weight="800" font-family="Consolas, monospace">${pin.code}: ${pin.kg}kg</text>
+          <rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="13" fill="rgba(10, 15, 29, 0.94)" stroke="${pin.stroke}" stroke-width="2" />
+          <circle cx="${pillX + 13}" cy="${pt.y}" r="4" fill="${pin.stroke}" />
+          <text x="${pillX + 22}" y="${pt.y + 4}" fill="#f8fafc" font-size="10.5" font-weight="800" font-family="Consolas, monospace">${pin.code}: ${pin.kg}${unit}</text>
+          
           ${isCalibrating ? `
-            <circle cx="${pt.x}" cy="${pt.y}" r="16" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="2 2" />
+            <circle cx="${pt.x}" cy="${pt.y}" r="22" fill="none" stroke="#00f2fe" stroke-width="2.5" stroke-dasharray="3 3" class="drag-handle" />
+            <text x="${pt.x}" y="${pillY - 6}" text-anchor="middle" fill="#00f2fe" font-size="9" font-weight="900">DRAG</text>
           ` : ''}
         </g>
       `;
