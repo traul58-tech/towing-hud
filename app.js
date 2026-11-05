@@ -33,7 +33,13 @@ let state = {
   audioEnabled: true,
   daylightMode: false,
   rigViewMode: 'blueprint', // 'blueprint' | 'photo'
-  rigPhotoUrl: null
+  rigPhotoUrl: null,
+  photoOverlay: {
+    showPins: true,
+    showDimensions: true,
+    calibrating: false
+  },
+  photoPositions: null
 };
 
 // Lever Arms in meters relative to caravan axle center
@@ -66,6 +72,12 @@ function initApp() {
       if (parsed.customCaravan) state.customCaravan = parsed.customCaravan;
       if (parsed.rigViewMode) state.rigViewMode = parsed.rigViewMode;
       if (parsed.rigPhotoUrl) state.rigPhotoUrl = parsed.rigPhotoUrl;
+      if (parsed.photoOverlay) {
+        state.photoOverlay = { ...state.photoOverlay, ...parsed.photoOverlay, calibrating: false };
+      }
+      if (parsed.photoPositions) {
+        state.photoPositions = parsed.photoPositions;
+      }
       if (parsed.daylightMode) {
         state.daylightMode = parsed.daylightMode;
         document.body.classList.toggle('daylight-mode', state.daylightMode);
@@ -283,8 +295,9 @@ function updateTelemetry() {
   // Update Dynamic Rig SVG Schematic
   renderRigBlueprint(p);
 
-  // Update Photo View Telemetry Dock
+  // Update Photo View Telemetry Dock and photo overlay
   renderPhotoTelemetryDock(p);
+  renderPhotoOverlay(p);
 
   // Update Storage Controls Display
   updateStorageCards(p);
@@ -390,7 +403,7 @@ function renderRigBlueprint(p) {
 
       <!-- Utility Tub Area -->
       <rect x="320" y="168" width="115" height="46" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(0,242,254,0.3)" stroke-dasharray="4,3"/>
-      <text x="378" y="195" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
+      <text x="378" y="160" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">TUB: ${Math.round(p.zones.tub)}kg</text>
 
       <!-- Cabin Area -->
       <text x="255" y="145" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">CABIN: ${Math.round(p.zones.cabin)}kg</text>
@@ -1007,7 +1020,12 @@ function saveState() {
       customCaravan: state.customCaravan,
       daylightMode: state.daylightMode,
       rigViewMode: state.rigViewMode,
-      rigPhotoUrl: state.rigPhotoUrl
+      rigPhotoUrl: state.rigPhotoUrl,
+      photoOverlay: {
+        showPins: state.photoOverlay.showPins,
+        showDimensions: state.photoOverlay.showDimensions
+      },
+      photoPositions: state.photoPositions
     }));
   } catch (e) {
     console.warn('LocalStorage error', e);
@@ -1015,6 +1033,29 @@ function saveState() {
 }
 
 // ================= RIG PHOTO & VIEW MODE CONTROLLER =================
+
+const DEFAULT_PHOTO_POSITIONS = {
+  frontAxle: { x: 130, y: 360 },
+  rearAxle: { x: 375, y: 360 },
+  tbm: { x: 485, y: 340 },
+  caravanAxle: { x: 815, y: 360 },
+  // Storage pins
+  cabin: { x: 230, y: 220 },
+  tub: { x: 350, y: 250 },
+  toolbox: { x: 545, y: 275 },
+  frontStorage: { x: 630, y: 220 },
+  frontTank: { x: 715, y: 340 },
+  midStorage: { x: 815, y: 200 },
+  rearTank: { x: 895, y: 340 },
+  rearStorage: { x: 955, y: 230 }
+};
+
+function getPhotoPositions() {
+  if (!state.photoPositions) {
+    state.photoPositions = JSON.parse(JSON.stringify(DEFAULT_PHOTO_POSITIONS));
+  }
+  return state.photoPositions;
+}
 
 function initRigView() {
   // Check if rig.jpg exists in the folder if no user photo uploaded yet
@@ -1026,6 +1067,7 @@ function initRigView() {
     };
     testImg.src = 'rig.jpg';
   }
+  setupOverlayDragging();
   updateRigViewDisplay();
 }
 
@@ -1039,30 +1081,41 @@ function setRigViewMode(mode) {
 function updateRigViewDisplay() {
   const svgEl = document.getElementById('rig-blueprint-svg');
   const photoContainer = document.getElementById('rig-photo-container');
+  const stage = document.getElementById('rig-photo-stage');
   const imgEl = document.getElementById('rig-photo-img');
   const dropzone = document.getElementById('photo-empty-dropzone');
   const removeBtn = document.getElementById('btn-remove-photo');
   const btnBlueprint = document.getElementById('btn-view-blueprint');
   const btnPhoto = document.getElementById('btn-view-photo');
+  const photoControls = document.getElementById('photo-overlay-controls');
 
   if (btnBlueprint && btnPhoto) {
     btnBlueprint.classList.toggle('active', state.rigViewMode === 'blueprint');
     btnPhoto.classList.toggle('active', state.rigViewMode === 'photo');
   }
 
+  if (photoControls) {
+    photoControls.style.display = state.rigViewMode === 'photo' ? 'flex' : 'none';
+  }
+
   if (state.rigViewMode === 'photo') {
     if (svgEl) svgEl.style.display = 'none';
     if (photoContainer) photoContainer.style.display = 'flex';
-    
+
     if (state.rigPhotoUrl) {
+      if (stage) stage.style.display = 'block';
       if (imgEl) {
-        imgEl.src = state.rigPhotoUrl;
-        imgEl.style.display = 'block';
+        imgEl.onload = () => renderPhotoOverlay(computePhysics());
+        if (imgEl.getAttribute('src') !== state.rigPhotoUrl) {
+          imgEl.src = state.rigPhotoUrl;
+        } else if (imgEl.complete && imgEl.naturalWidth) {
+          renderPhotoOverlay(computePhysics());
+        }
       }
       if (dropzone) dropzone.style.display = 'none';
       if (removeBtn) removeBtn.style.display = 'inline-flex';
     } else {
-      if (imgEl) imgEl.style.display = 'none';
+      if (stage) stage.style.display = 'none';
       if (dropzone) dropzone.style.display = 'flex';
       if (removeBtn) removeBtn.style.display = 'none';
     }
@@ -1072,7 +1125,6 @@ function updateRigViewDisplay() {
     if (removeBtn) removeBtn.style.display = state.rigPhotoUrl ? 'inline-flex' : 'none';
   }
 }
-
 function handleRigPhotoUpload(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
@@ -1158,6 +1210,296 @@ function renderPhotoTelemetryDock(p) {
       <div class="tele-card-sub">Max: ${p.caravan.maxGtm || '--'}kg | ATM: ${Math.round(p.trailerATM)}kg</div>
     </div>
   `;
+}
+
+// ================= LIVE HUD PHOTO OVERLAY & CALIBRATION =================
+
+let activeDragId = null;
+
+function setupOverlayDragging() {
+  const overlay = document.getElementById('photo-data-overlay');
+  if (!overlay || overlay._dragInitialized) return;
+  overlay._dragInitialized = true;
+
+  function getSvgPoint(e) {
+    const rect = overlay.getBoundingClientRect();
+    if (!rect.width || !rect.height) return { x: 500, y: 250 };
+    const x = Math.round(Math.max(15, Math.min(985, ((e.clientX - rect.left) / rect.width) * 1000)));
+    const y = Math.round(Math.max(15, Math.min(485, ((e.clientY - rect.top) / rect.height) * 500)));
+    return { x, y };
+  }
+
+  overlay.addEventListener('pointerdown', (e) => {
+    if (!state.photoOverlay.calibrating) return;
+    const target = e.target.closest('[data-drag-id]');
+    if (!target) return;
+    activeDragId = target.getAttribute('data-drag-id');
+    overlay.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  overlay.addEventListener('pointermove', (e) => {
+    if (!activeDragId || !state.photoOverlay.calibrating) return;
+    const pt = getSvgPoint(e);
+    const pos = getPhotoPositions();
+    if (pos[activeDragId]) {
+      pos[activeDragId].x = pt.x;
+      pos[activeDragId].y = pt.y;
+      renderPhotoOverlay(computePhysics());
+    }
+  });
+
+  function stopDrag(e) {
+    if (activeDragId) {
+      activeDragId = null;
+      saveState();
+      try { overlay.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  }
+
+  overlay.addEventListener('pointerup', stopDrag);
+  overlay.addEventListener('pointercancel', stopDrag);
+}
+
+function toggleOverlayCalibration() {
+  state.photoOverlay.calibrating = !state.photoOverlay.calibrating;
+  const btn = document.getElementById('btn-calibrate-overlay');
+  const banner = document.getElementById('calibration-banner');
+  if (btn) {
+    btn.classList.toggle('active', state.photoOverlay.calibrating);
+    btn.innerHTML = state.photoOverlay.calibrating ? '✓ Done Calibrating' : '🎯 Calibrate Pins';
+  }
+  if (banner) {
+    banner.style.display = state.photoOverlay.calibrating ? 'flex' : 'none';
+  }
+  renderPhotoOverlay(computePhysics());
+  playBlip();
+}
+
+function toggleOverlayOption(opt) {
+  if (opt === 'pins') {
+    state.photoOverlay.showPins = !state.photoOverlay.showPins;
+    const btn = document.getElementById('btn-toggle-pins');
+    if (btn) btn.classList.toggle('active', state.photoOverlay.showPins);
+  } else if (opt === 'dims') {
+    state.photoOverlay.showDimensions = !state.photoOverlay.showDimensions;
+    const btn = document.getElementById('btn-toggle-dims');
+    if (btn) btn.classList.toggle('active', state.photoOverlay.showDimensions);
+  }
+  saveState();
+  renderPhotoOverlay(computePhysics());
+  playBlip();
+}
+
+function resetOverlayPositions() {
+  if (confirm('Reset all pin and marker positions to default layout?')) {
+    state.photoPositions = JSON.parse(JSON.stringify(DEFAULT_PHOTO_POSITIONS));
+    saveState();
+    renderPhotoOverlay(computePhysics());
+    playChime();
+  }
+}
+
+async function checkForUpdates() {
+  const btn = document.getElementById('update-check-btn');
+  if (btn) btn.innerHTML = '⏳ Refreshing...';
+  try {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (let reg of registrations) {
+        await reg.update();
+        await reg.unregister();
+      }
+    }
+    if ('caches' in window) {
+      const cacheKeys = await caches.keys();
+      for (let key of cacheKeys) {
+        await caches.delete(key);
+      }
+    }
+    window.location.reload(true);
+  } catch (e) {
+    window.location.reload();
+  }
+}
+
+// Render dynamic HUD telemetry overlay directly onto the user's JPEG rig photo
+function renderPhotoOverlay(p) {
+  const overlay = document.getElementById('photo-data-overlay');
+  if (!overlay) return;
+  if (!p) p = computePhysics();
+
+  const pos = getPhotoPositions();
+  const isCalibrating = !!state.photoOverlay.calibrating;
+
+  const colors = {
+    pass: '#00e676',
+    warn: '#ffab00',
+    fail: '#ff1744'
+  };
+
+  const faCol = colors[p.status.frontAxle] || colors.pass;
+  const raCol = colors[p.status.rearAxle] || colors.pass;
+  const tbmCol = colors[p.status.tbm] || colors.pass;
+  const gtmCol = colors[p.status.gtm] || colors.pass;
+
+  const fa = pos.frontAxle || DEFAULT_PHOTO_POSITIONS.frontAxle;
+  const ra = pos.rearAxle || DEFAULT_PHOTO_POSITIONS.rearAxle;
+  const tbm = pos.tbm || DEFAULT_PHOTO_POSITIONS.tbm;
+  const ca = pos.caravanAxle || DEFAULT_PHOTO_POSITIONS.caravanAxle;
+
+  let html = `
+    <defs>
+      <!-- Neon Downward Arrow marker for Towball Hitch -->
+      <marker id="neon-down-arrow" markerWidth="10" markerHeight="10" refX="5" refY="7" orient="auto">
+        <path d="M 0 0 L 10 0 L 5 8 Z" fill="${tbmCol}" />
+      </marker>
+      <!-- Dimension Arrowheads -->
+      <marker id="dim-arrow-start" markerWidth="6" markerHeight="6" refX="2" refY="3" orient="auto">
+        <path d="M 6 0 L 0 3 L 6 6 Z" fill="#38bdf8" />
+      </marker>
+      <marker id="dim-arrow-end" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto">
+        <path d="M 0 0 L 6 3 L 0 6 Z" fill="#38bdf8" />
+      </marker>
+    </defs>
+  `;
+
+  // 1. Dimension Lines (Wheelbase, Overhang, Hitch Distance)
+  if (state.photoOverlay.showDimensions) {
+    const dimY = 405;
+    html += `
+      <!-- Dimension: Wheelbase (Front to Rear Axle) -->
+      <g opacity="0.85">
+        <line x1="${fa.x}" y1="${dimY}" x2="${ra.x}" y2="${dimY}" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="4 3" marker-start="url(#dim-arrow-start)" marker-end="url(#dim-arrow-end)" />
+        <line x1="${fa.x}" y1="${fa.y}" x2="${fa.x}" y2="${dimY + 8}" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2 3" opacity="0.5" />
+        <line x1="${ra.x}" y1="${ra.y}" x2="${ra.x}" y2="${dimY + 8}" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2 3" opacity="0.5" />
+        <rect x="${((fa.x + ra.x) / 2) - 48}" y="${dimY - 11}" width="96" height="20" rx="4" fill="rgba(10, 15, 29, 0.9)" stroke="#38bdf8" stroke-width="1" />
+        <text x="${(fa.x + ra.x) / 2}" y="${dimY + 3}" text-anchor="middle" fill="#38bdf8" font-size="10" font-weight="700">WB: ${p.vehicle.wheelbase.toFixed(2)}m</text>
+      </g>
+
+      <!-- Dimension: Overhang (Rear Axle to Towball) -->
+      <g opacity="0.85">
+        <line x1="${ra.x}" y1="${dimY}" x2="${tbm.x}" y2="${dimY}" stroke="#f59e0b" stroke-width="1.8" stroke-dasharray="4 3" marker-start="url(#dim-arrow-start)" marker-end="url(#dim-arrow-end)" />
+        <line x1="${tbm.x}" y1="${tbm.y}" x2="${tbm.x}" y2="${dimY + 8}" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2 3" opacity="0.5" />
+        <rect x="${((ra.x + tbm.x) / 2) - 42}" y="${dimY - 11}" width="84" height="20" rx="4" fill="rgba(10, 15, 29, 0.9)" stroke="#f59e0b" stroke-width="1" />
+        <text x="${(ra.x + tbm.x) / 2}" y="${dimY + 3}" text-anchor="middle" fill="#f59e0b" font-size="10" font-weight="700">OH: ${p.vehicle.overhang.toFixed(2)}m</text>
+      </g>
+
+      <!-- Dimension: Hitch to Caravan Axle -->
+      <g opacity="0.85">
+        <line x1="${tbm.x}" y1="${dimY}" x2="${ca.x}" y2="${dimY}" stroke="#a78bfa" stroke-width="1.8" stroke-dasharray="4 3" marker-start="url(#dim-arrow-start)" marker-end="url(#dim-arrow-end)" />
+        <line x1="${ca.x}" y1="${ca.y}" x2="${ca.x}" y2="${dimY + 8}" stroke="#a78bfa" stroke-width="1" stroke-dasharray="2 3" opacity="0.5" />
+        <rect x="${((tbm.x + ca.x) / 2) - 52}" y="${dimY - 11}" width="104" height="20" rx="4" fill="rgba(10, 15, 29, 0.9)" stroke="#a78bfa" stroke-width="1" />
+        <text x="${(tbm.x + ca.x) / 2}" y="${dimY + 3}" text-anchor="middle" fill="#a78bfa" font-size="10" font-weight="700">HITCH: ${p.caravan.hitchDist.toFixed(2)}m</text>
+      </g>
+    `;
+  }
+
+  // Helper for Axle telemetry cards at bottom (y: 420, height: 58)
+  function renderAxleCard(x, yAnchor, title, valKg, statusCol, subtext, dragId) {
+    const cardW = 142;
+    const cardH = 58;
+    const cardX = Math.max(10, Math.min(990 - cardW, x - cardW / 2));
+    const cardY = 428;
+    return `
+      <g class="overlay-node ${isCalibrating ? 'calibrating' : ''}" data-drag-id="${dragId}">
+        <!-- Leader line from anchor dot to card -->
+        <line x1="${x}" y1="${yAnchor}" x2="${cardX + cardW / 2}" y2="${cardY}" stroke="${statusCol}" stroke-width="2" stroke-dasharray="4 3" />
+        
+        <!-- Card Backdrop -->
+        <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="7" fill="rgba(10, 15, 29, 0.92)" stroke="${statusCol}" stroke-width="1.8" />
+        
+        <!-- Card Text -->
+        <text x="${cardX + cardW / 2}" y="${cardY + 16}" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="800" letter-spacing="0.6">${title}</text>
+        <text x="${cardX + cardW / 2}" y="${cardY + 37}" text-anchor="middle" fill="#f8fafc" font-size="16" font-weight="800" font-family="Consolas, monospace">${valKg}</text>
+        <text x="${cardX + cardW / 2}" y="${cardY + 50}" text-anchor="middle" fill="${statusCol}" font-size="9" font-weight="700">${subtext}</text>
+
+        <!-- Hub Anchor Dot -->
+        <circle cx="${x}" cy="${yAnchor}" r="8" fill="${statusCol}" stroke="#ffffff" stroke-width="2.5" />
+        ${isCalibrating ? `
+          <!-- Pulsing calibration drag ring -->
+          <circle cx="${x}" cy="${yAnchor}" r="18" fill="none" stroke="#00f2fe" stroke-width="2" stroke-dasharray="3 3" class="drag-handle" />
+          <text x="${x}" y="${yAnchor - 12}" text-anchor="middle" fill="#00f2fe" font-size="9" font-weight="800">DRAG</text>
+        ` : ''}
+      </g>
+    `;
+  }
+
+  // 2. Front Axle Card
+  const faMargin = p.margins.frontAxle !== null ? (p.margins.frontAxle >= 0 ? '+' : '') + Math.round(p.margins.frontAxle) + ' kg' : p.status.frontAxle.toUpperCase();
+  html += renderAxleCard(fa.x, fa.y, 'FRONT AXLE LOAD', `${Math.round(p.frontAxleLoad).toLocaleString()} kg`, faCol, `Margin: ${faMargin}`, 'frontAxle');
+
+  // 3. Rear Axle Card
+  const raMargin = p.margins.rearAxle !== null ? (p.margins.rearAxle >= 0 ? '+' : '') + Math.round(p.margins.rearAxle) + ' kg' : p.status.rearAxle.toUpperCase();
+  html += renderAxleCard(ra.x, ra.y, 'REAR AXLE LOAD', `${Math.round(p.rearAxleLoad).toLocaleString()} kg`, raCol, `Margin: ${raMargin}`, 'rearAxle');
+
+  // 4. Caravan Axles (GTM) Card
+  const gtmMargin = p.margins.gtm !== null ? (p.margins.gtm >= 0 ? '+' : '') + Math.round(p.margins.gtm) + ' kg' : p.status.gtm.toUpperCase();
+  html += renderAxleCard(ca.x, ca.y, 'CARAVAN TYRES (GTM)', `${Math.round(p.trailerGTM).toLocaleString()} kg`, gtmCol, `Margin: ${gtmMargin}`, 'caravanAxle');
+
+  // 5. Towball Download (TBM) - Elevated Card & Bold Neon Downforce Arrow
+  const tbmCardW = 186;
+  const tbmCardH = 62;
+  const tbmCardX = Math.max(10, Math.min(990 - tbmCardW, tbm.x - tbmCardW / 2));
+  const tbmCardY = 18;
+  const tbmMargin = (p.margins.tbm >= 0 ? '+' : '') + Math.round(p.margins.tbm) + ' kg';
+
+  html += `
+    <g class="overlay-node ${isCalibrating ? 'calibrating' : ''}" data-drag-id="tbm">
+      <!-- Neon Downforce Vector Line pointing from Elevated Card directly to Tow Hitch -->
+      <line x1="${tbmCardX + tbmCardW / 2}" y1="${tbmCardY + tbmCardH}" x2="${tbm.x}" y2="${tbm.y - 12}" stroke="${tbmCol}" stroke-width="3" marker-end="url(#neon-down-arrow)" />
+
+      <!-- Elevated TBM Card -->
+      <rect x="${tbmCardX}" y="${tbmCardY}" width="${tbmCardW}" height="${tbmCardH}" rx="8" fill="rgba(10, 15, 29, 0.94)" stroke="${tbmCol}" stroke-width="2" />
+      <text x="${tbmCardX + tbmCardW / 2}" y="${tbmCardY + 18}" text-anchor="middle" fill="#38bdf8" font-size="10.5" font-weight="800" letter-spacing="0.6">TOWBALL DOWNLOAD (TBM)</text>
+      <text x="${tbmCardX + tbmCardW / 2}" y="${tbmCardY + 40}" text-anchor="middle" fill="#ffffff" font-size="18" font-weight="800" font-family="Consolas, monospace">${Math.round(p.tbm).toLocaleString()} kg · ${p.tbmPercent.toFixed(1)}%</text>
+      <text x="${tbmCardX + tbmCardW / 2}" y="${tbmCardY + 54}" text-anchor="middle" fill="${tbmCol}" font-size="9.5" font-weight="700">Margin: ${tbmMargin} · Cap: ${p.vehicle.maxTbm} kg</text>
+
+      <!-- Hitch Anchor Point -->
+      <circle cx="${tbm.x}" cy="${tbm.y}" r="8" fill="${tbmCol}" stroke="#ffffff" stroke-width="2.5" />
+      ${isCalibrating ? `
+        <circle cx="${tbm.x}" cy="${tbm.y}" r="18" fill="none" stroke="#00f2fe" stroke-width="2" stroke-dasharray="3 3" class="drag-handle" />
+        <text x="${tbm.x}" y="${tbm.y - 14}" text-anchor="middle" fill="#00f2fe" font-size="9" font-weight="800">DRAG</text>
+      ` : ''}
+    </g>
+  `;
+
+  // 6. Storage Compartment Pins (if enabled)
+  if (state.photoOverlay.showPins) {
+    const pins = [
+      { id: 'cabin', code: 'CAB', label: 'Cabin', kg: p.storage.cabin, stroke: '#38bdf8' },
+      { id: 'tub', code: 'TUB', label: 'Tub/Tray', kg: p.storage.tub, stroke: '#38bdf8' },
+      { id: 'toolbox', code: 'TB', label: 'Toolbox', kg: p.storage.toolbox, stroke: '#f59e0b' },
+      { id: 'frontStorage', code: 'FS', label: 'Tunnel Boot', kg: p.storage.frontStorage, stroke: '#a78bfa' },
+      { id: 'frontTank', code: 'FW', label: 'Front Tank', kg: p.storage.frontTank, stroke: '#06b6d4' },
+      { id: 'midStorage', code: 'MID', label: 'Mid/Pantry', kg: p.storage.midStorage, stroke: '#a78bfa' },
+      { id: 'rearTank', code: 'RW', label: 'Rear Tank', kg: p.storage.rearTank, stroke: '#06b6d4' },
+      { id: 'rearStorage', code: 'RS', label: 'Rear Storage', kg: p.storage.rearStorage, stroke: '#f43f5e' }
+    ];
+
+    pins.forEach(pin => {
+      const pt = pos[pin.id] || DEFAULT_PHOTO_POSITIONS[pin.id];
+      if (!pt) return;
+      const pillW = 68;
+      const pillH = 22;
+      const pillX = pt.x - pillW / 2;
+      const pillY = pt.y - pillH / 2;
+
+      html += `
+        <g class="overlay-node ${isCalibrating ? 'calibrating' : ''}" data-drag-id="${pin.id}">
+          <!-- Glow tag pill -->
+          <rect x="${pillX}" y="${pillY}" width="${pillW}" height="${pillH}" rx="11" fill="rgba(10, 15, 29, 0.9)" stroke="${pin.stroke}" stroke-width="1.8" />
+          <text x="${pt.x}" y="${pt.y + 4}" text-anchor="middle" fill="#f8fafc" font-size="9.5" font-weight="800" font-family="Consolas, monospace">${pin.code}: ${pin.kg}kg</text>
+          ${isCalibrating ? `
+            <circle cx="${pt.x}" cy="${pt.y}" r="16" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="2 2" />
+          ` : ''}
+        </g>
+      `;
+    });
+  }
+
+  overlay.innerHTML = html;
+  setupOverlayDragging();
 }
 
 // Audio Feedback using Web Audio API (Synthesizer, zero assets needed)

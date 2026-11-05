@@ -55,6 +55,9 @@
 
       <!-- Actions -->
       <div class="header-actions">
+        <button id="update-check-btn" class="hud-btn" onclick="checkForUpdates()" title="Force check for updates and refresh cache">
+          🔄 Refresh App
+        </button>
         <button id="theme-toggle-btn" class="hud-btn" title="Toggle daylight high-contrast mode">
           ☀️ Daylight Mode
         </button>
@@ -205,6 +208,22 @@
             <button id="btn-view-photo" class="toggle-pill" onclick="setRigViewMode('photo')">📷 Rig Photo</button>
           </div>
 
+          <!-- Photo Overlay Customization Bar (Visible in Photo View) -->
+          <div id="photo-overlay-controls" class="photo-overlay-controls" style="display: none;">
+            <button id="btn-calibrate-overlay" class="hud-btn" onclick="toggleOverlayCalibration()" title="Click to drag pins to match your photo">
+              🎯 Calibrate Pins
+            </button>
+            <button id="btn-toggle-pins" class="toggle-pill active" onclick="toggleOverlayOption('pins')" title="Toggle storage compartment pins">
+              🏷️ Storage Pins
+            </button>
+            <button id="btn-toggle-dims" class="toggle-pill active" onclick="toggleOverlayOption('dims')" title="Toggle wheelbase and overhang dimension lines">
+              📐 Dimensions
+            </button>
+            <button class="hud-btn" onclick="resetOverlayPositions()" title="Reset all pin positions to default">
+              ↺ Reset Pins
+            </button>
+          </div>
+
           <input type="file" id="rig-photo-input" accept="image/jpeg,image/png,image/webp" style="display: none;" onchange="handleRigPhotoUpload(event)">
           <button class="hud-btn" onclick="document.getElementById('rig-photo-input').click()" title="Upload a side photo of your car & caravan">
             📷 Upload JPEG
@@ -223,14 +242,30 @@
 
         <!-- 2. Photo View Container -->
         <div id="rig-photo-container" class="rig-photo-wrap" style="display: none;">
+          <!-- Calibration Interactive Mode Banner -->
+          <div id="calibration-banner" class="calibration-banner" style="display: none;">
+            <span>🎯 <strong>Calibration Mode Active:</strong> Click &amp; drag any marker or pin on your photo to align it with your car's wheels, tow hitch, and caravan axles. Changes save automatically!</span>
+            <button class="hud-btn primary" style="padding: 2px 10px; font-size: 11px;" onclick="toggleOverlayCalibration()">Done</button>
+          </div>
+
           <div class="rig-photo-viewport">
-            <img id="rig-photo-img" src="" alt="Custom Rig Photo" style="display: none;">
-            
+            <div id="rig-photo-stage" class="rig-photo-stage" style="display: none;">
+              <img id="rig-photo-img" src="" alt="Custom Rig Photo">
+              <svg
+                id="photo-data-overlay"
+                class="photo-data-overlay"
+                viewBox="0 0 1000 500"
+                preserveAspectRatio="none"
+                aria-label="Live towing telemetry overlay over photo">
+              </svg>
+            </div>
+
             <!-- Empty State Dropzone -->
             <div id="photo-empty-dropzone" class="photo-empty-dropzone" onclick="document.getElementById('rig-photo-input').click()">
               <div class="dropzone-icon">📷</div>
               <div class="dropzone-title">Upload a Photo of Your Tow Rig</div>
-              <div class="dropzone-sub">Drag & drop your ute & caravan JPEG here, or click to browse. The HUD will overlay your live axle loads and towball downforce directly over your photo.</div>
+              <div class="dropzone-sub">Drag &amp; drop your ute &amp; caravan JPEG here, or click to browse. 
+        The HUD will overlay your live axle loads, towball downforce, and storage pins directly over your photo.</div>
               <button class="hud-btn primary" style="margin-top: 8px;">Select JPEG / PNG File</button>
             </div>
           </div>

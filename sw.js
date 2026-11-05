@@ -1,4 +1,4 @@
-const CACHE_NAME = 'towing-hud-v1';
+const CACHE_NAME = 'towing-hud-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -28,10 +28,31 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((res) => {
-      return res || fetch(e.request).catch(() => caches.match('./index.html'));
-    })
-  );
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+
+  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) {
+    return;
+  }
+
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+
+    try {
+      const fresh = await fetch(new Request(request, { cache: 'no-cache' }));
+      if (fresh.ok) {
+        await cache.put(request, fresh.clone());
+      }
+      return fresh;
+    } catch (error) {
+      const cached = await cache.match(request);
+      if (cached) return cached;
+
+      if (request.mode === 'navigate') {
+        return cache.match('./index.html');
+      }
+
+      throw error;
+    }
+  })());
 });

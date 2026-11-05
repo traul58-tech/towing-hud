@@ -640,31 +640,128 @@ body.daylight-mode .blueprint-canvas-wrap {
   width: 100%;
 }
 
+.photo-overlay-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.calibration-banner {
+  background: rgba(0, 242, 254, 0.12);
+  border: 1px dashed var(--accent-cyan);
+  color: var(--accent-cyan);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: pulseCalibration 2s infinite ease-in-out;
+}
+
+@keyframes pulseCalibration {
+  0%, 100% { border-color: var(--accent-cyan); box-shadow: 0 0 10px rgba(0, 242, 254, 0.2); }
+  50% { border-color: #ffffff; box-shadow: 0 0 16px rgba(0, 242, 254, 0.4); }
+}
+
 .rig-photo-viewport {
   position: relative;
   width: 100%;
-  max-height: 420px;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.9), rgba(5, 8, 17, 0.98));
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.95), rgba(5, 8, 17, 0.98));
   border: 1px solid var(--border-subtle);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+  padding: 12px;
 }
 
 body.daylight-mode .rig-photo-viewport {
   background: #f1f5f9;
 }
 
-#rig-photo-img {
-  width: 100%;
-  max-height: 400px;
-  object-fit: contain;
+.rig-photo-stage {
+  position: relative;
   display: block;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
   border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+#rig-photo-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+  object-fit: contain;
+  margin: 0 auto;
+  border-radius: var(--radius-sm);
+  filter: brightness(0.9) contrast(1.05);
   transition: filter 0.3s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.photo-data-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: auto;
+}
+
+.overlay-node {
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.overlay-node:hover {
+  filter: brightness(1.2);
+}
+
+.overlay-node.calibrating {
+  cursor: move !important;
+}
+
+.overlay-node.calibrating circle.drag-handle {
+  animation: pulseDrag 1.5s infinite;
+}
+
+@keyframes pulseDrag {
+  0%, 100% { stroke-width: 2.5; stroke-opacity: 1; }
+  50% { stroke-width: 5; stroke-opacity: 0.6; }
+}
+
+.photo-overlay-label {
+  fill: #f8fafc;
+  font: 800 13px Consolas, monospace;
+  paint-order: stroke;
+  stroke: rgba(10, 15, 29, 0.95);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.photo-overlay-title {
+  fill: #94a3b8;
+  font: 800 9px 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.photo-overlay-line {
+  stroke-width: 2.5;
+  stroke-dasharray: 6 4;
 }
 
 /* Photo Empty Dropzone */
@@ -679,7 +776,6 @@ body.daylight-mode .rig-photo-viewport {
   text-align: center;
   width: 100%;
 }
-
 .photo-empty-dropzone:hover .dropzone-icon {
   transform: scale(1.1);
   color: var(--accent-cyan);
