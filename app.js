@@ -23,7 +23,7 @@ const DEFAULT_CARAVAN_CONFIG = {
 
 // Global State
 let state = {
-  currentVehicleId: 'mitsubishi-triton-next-gen-mv',
+  currentVehicleId: 'next-gen-ranger-wildtrak',
   currentCaravanId: 'tandem-van',
   
   // Dynamic caravan architecture configuration
@@ -31,6 +31,7 @@ let state = {
   
   // Storage Offsets (Simulation Sliders - Excel Col E)
   sliderOffsets: {
+    aFrame: 0,
     frontStorage: 0,
     frontTank: 0,
     midStorage: 0,
@@ -64,6 +65,7 @@ let state = {
 
 // Lever Arms in meters relative to caravan axle center
 const LEVER_ARMS = {
+  aFrame: 3.75,
   frontStorage: 3.00,
   frontTank: 1.80,
   midStorage: 0.00,
@@ -109,20 +111,9 @@ function initApp() {
       }
       if (parsed.sliderOffsets) {
         state.sliderOffsets = { ...state.sliderOffsets, ...parsed.sliderOffsets };
-        // Migrate legacy toolbox slider offset into frontStorage if present
-        if (parsed.sliderOffsets.toolbox) {
-          state.sliderOffsets.frontStorage = (state.sliderOffsets.frontStorage || 0) + parsed.sliderOffsets.toolbox;
-          delete state.sliderOffsets.toolbox;
-        }
       }
-      if (parsed.inventory && parsed.inventory.length > 0) {
-        // Preserve user's inventory and remap any legacy 'toolbox' items to 'frontStorage'
-        state.inventory = parsed.inventory.map(item => {
-          if (item.zone === 'toolbox') {
-            return { ...item, zone: 'frontStorage' };
-          }
-          return item;
-        });
+      if (parsed.payloadVersion >= 4 && parsed.inventory && parsed.inventory.length > 0) {
+        state.inventory = parsed.inventory;
       }
       if (parsed.customVehicle) state.customVehicle = parsed.customVehicle;
       if (parsed.customCaravan) state.customCaravan = parsed.customCaravan;
@@ -172,6 +163,7 @@ function getActiveCaravan() {
 function getZoneBaseWeights() {
   const cfg = getCaravanConfig();
   const totals = {
+    aFrame: 0,
     frontStorage: 0,
     frontTank: cfg.frontTank && cfg.frontTank.enabled ? (cfg.frontTank.capacity || 95) : 0,
     midStorage: 0,
@@ -207,6 +199,7 @@ function computePhysics() {
   
   // Total Effective Zone Weights = Base + Slider Offset
   const zones = {
+    aFrame: Math.max(0, baseWeights.aFrame + (state.sliderOffsets.aFrame || 0)),
     frontStorage: Math.max(0, baseWeights.frontStorage + (state.sliderOffsets.frontStorage || 0)),
     frontTank: (cfg.frontTank && cfg.frontTank.enabled) ? Math.max(0, baseWeights.frontTank + (state.sliderOffsets.frontTank || 0)) : 0,
     midStorage: Math.max(0, baseWeights.midStorage + (state.sliderOffsets.midStorage || 0)),
@@ -217,11 +210,12 @@ function computePhysics() {
   };
 
   // Caravan Storage Load Total
-  const caravanCargoTotal = zones.frontStorage + zones.frontTank + 
+  const caravanCargoTotal = zones.aFrame + zones.frontStorage + zones.frontTank + 
                             zones.midStorage + zones.rearTank + zones.rearStorage;
   
   // Moment balance around caravan axle center (kg * m)
-  const momentsSum = (zones.frontStorage * LEVER_ARMS.frontStorage) +
+  const momentsSum = (zones.aFrame * LEVER_ARMS.aFrame) +
+                     (zones.frontStorage * LEVER_ARMS.frontStorage) +
                      (zones.frontTank * LEVER_ARMS.frontTank) +
                      (zones.midStorage * LEVER_ARMS.midStorage) +
                      (zones.rearTank * LEVER_ARMS.rearTank) +
@@ -693,7 +687,18 @@ function renderRigBlueprint(p) {
 
       <!-- ================= STORAGE ZONE PINS (UNCLUTTERED & STAGGERED) ================= -->
       
-      <!-- Front Storage (+3.0m) - Combined Front Storage & A-Frame Gear -->
+      <!-- A-Frame (+3.75m) - Drawbar Toolboxes & Gas Bottles -->
+      <g transform="translate(560, 155)" class="pin-node" onclick="focusZone('aFrame')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#00e676" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#00e676" font-size="9" font-weight="900" text-anchor="middle">AF</text>
+        <g transform="translate(0, 18)">
+          <rect x="-44" y="0" width="88" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#00e676" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">+3.75m A-Frame</text>
+          <text x="0" y="20" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.aFrame)} kg</text>
+        </g>
+      </g>
+
+      <!-- Front Storage (+3.0m) - Bedroom & Tunnel Boot -->
       <g transform="translate(670, 138)" class="pin-node" onclick="focusZone('frontStorage')" style="cursor: pointer;">
         <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#00e676" stroke-width="2.5" filter="url(#neonGlow)"/>
         <text x="0" y="4" fill="#00e676" font-size="9" font-weight="900" text-anchor="middle">FS</text>
@@ -833,7 +838,7 @@ function updateStorageCards(p) {
   renderWaterBalancerUI();
 
   // Update Zone Weights & Sliders
-  const zones = ['frontStorage', 'frontTank', 'midStorage', 'rearTank', 'rearStorage', 'cabin', 'tub'];
+  const zones = ['aFrame', 'frontStorage', 'frontTank', 'midStorage', 'rearTank', 'rearStorage', 'cabin', 'tub'];
   zones.forEach(zoneKey => {
     const totalEl = document.getElementById(`weight-${zoneKey}`);
     const offsetEl = document.getElementById(`offset-${zoneKey}`);
@@ -1115,6 +1120,7 @@ function getZoneLabel(zone) {
   const map = {
     cabin: 'Vehicle Cabin',
     tub: 'Vehicle Tub',
+    aFrame: 'A-Frame (+3.75m)',
     frontStorage: 'Front Storage (+3.0m)',
     frontTank: 'Front Tank (+1.8m)',
     midStorage: 'Mid Storage (0.0m)',
@@ -1155,7 +1161,7 @@ function bindEvents() {
   });
 
   // Sliders
-  const zones = ['frontStorage', 'frontTank', 'midStorage', 'rearTank', 'rearStorage', 'cabin', 'tub'];
+  const zones = ['aFrame', 'frontStorage', 'frontTank', 'midStorage', 'rearTank', 'rearStorage', 'cabin', 'tub'];
   zones.forEach(zone => {
     const slider = document.getElementById(`slider-${zone}`);
     if (slider) {
@@ -1214,8 +1220,12 @@ function bindEvents() {
   document.getElementById('reset-btn').addEventListener('click', () => {
     if (confirm('Reset all simulation sliders and return to the original spreadsheet baseline?')) {
       Object.keys(state.sliderOffsets).forEach(k => state.sliderOffsets[k] = 0);
+      if (typeof DEFAULT_TOWING_DATA !== 'undefined' && DEFAULT_TOWING_DATA.inventory) {
+        state.inventory = JSON.parse(JSON.stringify(DEFAULT_TOWING_DATA.inventory));
+      }
       playChime();
       saveState();
+      renderInventoryTable();
       updateTelemetry();
     }
   });
@@ -1296,7 +1306,7 @@ function focusZone(zoneKey) {
 function saveState() {
   try {
     localStorage.setItem('towing_hud_state_v1', JSON.stringify({
-      payloadVersion: 3,
+      payloadVersion: 4,
       currentVehicleId: state.currentVehicleId,
       currentCaravanId: state.currentCaravanId,
       caravanConfig: state.caravanConfig,
@@ -1328,6 +1338,7 @@ const DEFAULT_PHOTO_POSITIONS = {
   // Storage pins
   cabin: { x: 230, y: 220 },
   tub: { x: 350, y: 250 },
+  aFrame: { x: 550, y: 280 },
   frontStorage: { x: 620, y: 230 },
   frontTank: { x: 715, y: 340 },
   midStorage: { x: 815, y: 200 },
@@ -1787,6 +1798,7 @@ function renderPhotoOverlay(p) {
     const pins = [
       { id: 'cabin', code: 'CAB', label: 'Cabin Occupants & Gear', kg: Math.round(z.cabin || 0), stroke: '#38bdf8' },
       { id: 'tub', code: 'TUB', label: 'Tub / Tray Cargo', kg: Math.round(z.tub || 0), stroke: '#38bdf8' },
+      { id: 'aFrame', code: 'AF', label: 'A-Frame Toolboxes (+3.75m)', kg: Math.round(z.aFrame || 0), stroke: '#00e676' },
       { id: 'frontStorage', code: 'FS', label: 'Front Storage (+3.0m)', kg: Math.round(z.frontStorage || 0), stroke: '#00e676' },
       ...(cfg.frontTank && cfg.frontTank.enabled ? [{
         id: 'frontTank',

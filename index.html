@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Towing Dashboard HUD // Physics & Compliance Telemetry</title>
   
   <!-- Android PWA & Mobile Web App Meta -->
@@ -309,21 +309,37 @@
           </div>
         </div>
 
-        <!-- 7 Storage Zones Grid -->
+        <!-- 8 Storage Zones Grid -->
         <div class="storage-zones-grid">
 
-          <!-- 1. Front Storage (+3.0m) -->
+          <!-- 1. A-Frame (+3.75m) -->
+          <div id="card-aFrame" class="zone-control-card">
+            <div class="zone-header">
+              <span class="zone-title">A-Frame</span>
+              <span class="lever-arm-tag front">+3.75 m</span>
+            </div>
+            <div class="zone-weights-row">
+              <span id="weight-aFrame" class="zone-total-kg">75 kg</span>
+              <span class="zone-breakdown-sub">+0.75kg ball / kg</span>
+            </div>
+            <div class="zone-slider-wrap">
+              <input id="slider-aFrame" type="range" class="hud-slider" min="-60" max="100" step="1" value="0">
+              <span id="offset-aFrame" class="slider-offset-display">0 kg</span>
+            </div>
+          </div>
+
+          <!-- 2. Front Storage (+3.0m) -->
           <div id="card-frontStorage" class="zone-control-card">
             <div class="zone-header">
               <span class="zone-title">Front Storage</span>
               <span class="lever-arm-tag front">+3.00 m</span>
             </div>
             <div class="zone-weights-row">
-              <span id="weight-frontStorage" class="zone-total-kg">154 kg</span>
+              <span id="weight-frontStorage" class="zone-total-kg">79 kg</span>
               <span class="zone-breakdown-sub">+0.60kg ball / kg</span>
             </div>
             <div class="zone-slider-wrap">
-              <input id="slider-frontStorage" type="range" class="hud-slider" min="-80" max="120" step="1" value="0">
+              <input id="slider-frontStorage" type="range" class="hud-slider" min="-60" max="100" step="1" value="0">
               <span id="offset-frontStorage" class="slider-offset-display">0 kg</span>
             </div>
           </div>
@@ -501,6 +517,7 @@
           <button class="inv-tab active" data-filter="all">All Items</button>
           <button class="inv-tab" data-filter="vehicle">Tow Vehicle</button>
           <button class="inv-tab" data-filter="van">Caravan Only</button>
+          <button class="inv-tab" data-filter="aFrame">A-Frame</button>
           <button class="inv-tab" data-filter="frontStorage">Front Storage</button>
           <button class="inv-tab" data-filter="midStorage">Kitchen/Mid</button>
           <button class="inv-tab" data-filter="rearStorage">Rear Storage</button>
@@ -754,6 +771,7 @@
           <div class="form-group">
             <label>Storage Location</label>
             <select id="new-item-zone">
+              <option value="aFrame">A-Frame (+3.75m)</option>
               <option value="frontStorage">Front Storage (+3.0m)</option>
               <option value="frontTank">Front Water Tank (+1.8m)</option>
               <option value="midStorage">Mid Internal Storage (0.0m)</option>

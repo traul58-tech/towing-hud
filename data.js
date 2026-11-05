@@ -1,4 +1,4 @@
-﻿const DEFAULT_TOWING_DATA = {
+const DEFAULT_TOWING_DATA = {
     "vehicles":  [
                      {
                          "id":  "lc300-sahara",
@@ -64,14 +64,14 @@
                          "gcm":  6400,
                          "maxTbm":  350,
                          "wheelbase":  3.27,
-                         "overhang":  1.31,
+                         "overhang":  1.36,
                          "rearAxleTare":  1044,
                          "frontAxleTare":  1301,
                          "maxRearAxle":  1959,
                          "maxFrontAxle":  1490
                      },
                      {
-                         "id":  "mazda-bt-50-sp-3-0l-",
+                         "id":  "mazda-bt-50-sp-3-0l",
                          "name":  "Mazda BT-50 SP (3.0L)",
                          "tare":  2035,
                          "gvm":  3100,
@@ -127,7 +127,7 @@
                          "maxFrontAxle":  1450
                      },
                      {
-                         "id":  "toyota-hilux-sr5-2-8l-",
+                         "id":  "toyota-hilux-sr5-2-8l",
                          "name":  "Toyota Hilux SR5 (2.8L)",
                          "tare":  2100,
                          "gvm":  3050,
@@ -141,7 +141,7 @@
                          "maxFrontAxle":  1350
                      },
                      {
-                         "id":  "mitsubishi-triton-next-gen-mv-",
+                         "id":  "mitsubishi-triton-next-gen-mv",
                          "name":  "Mitsubishi Triton (Next-Gen MV)",
                          "tare":  2010,
                          "gvm":  3200,
@@ -155,7 +155,7 @@
                          "maxFrontAxle":  1450
                      },
                      {
-                         "id":  "isuzu-d-max-3-0l-",
+                         "id":  "isuzu-d-max-3-0l",
                          "name":  "Isuzu D-MAX (3.0L)",
                          "tare":  2045,
                          "gvm":  3100,
@@ -203,7 +203,7 @@
                           "name":  "Person 1",
                           "itemWeight":  83,
                           "travelWeight":  83,
-                          "category":  "Cabin Cargo",
+                          "category":  "Vehicle Cabin Cargo",
                           "zone":  "cabin",
                           "packed":  true
                       },
@@ -211,7 +211,7 @@
                           "name":  "Person 2",
                           "itemWeight":  78,
                           "travelWeight":  78,
-                          "category":  "Cabin Cargo",
+                          "category":  "Vehicle Cabin Cargo",
                           "zone":  "cabin",
                           "packed":  true
                       },
@@ -219,7 +219,7 @@
                           "name":  "Beer (14kg/Block)",
                           "itemWeight":  28,
                           "travelWeight":  28,
-                          "category":  "Cabin Cargo",
+                          "category":  "Vehicle Cabin Cargo",
                           "zone":  "cabin",
                           "packed":  true
                       },
@@ -227,7 +227,7 @@
                           "name":  "Wine (6 Bottles) 8kg",
                           "itemWeight":  16,
                           "travelWeight":  16,
-                          "category":  "Cabin Cargo",
+                          "category":  "Vehicle Cabin Cargo",
                           "zone":  "cabin",
                           "packed":  true
                       },
@@ -235,7 +235,7 @@
                           "name":  "Blue Tool Box",
                           "itemWeight":  10.4,
                           "travelWeight":  10.4,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -243,7 +243,7 @@
                           "name":  "Water Bladder",
                           "itemWeight":  4.5,
                           "travelWeight":  4.5,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -251,7 +251,7 @@
                           "name":  "Portable Fridge",
                           "itemWeight":  10,
                           "travelWeight":  10,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -259,7 +259,7 @@
                           "name":  "3x10Ltr Diesel container",
                           "itemWeight":  3,
                           "travelWeight":  30,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -267,7 +267,7 @@
                           "name":  "2x10Ltr Water container",
                           "itemWeight":  2,
                           "travelWeight":  20,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -275,7 +275,7 @@
                           "name":  "Gravel Flaps",
                           "itemWeight":  5.5,
                           "travelWeight":  5.5,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -283,7 +283,7 @@
                           "name":  "Chainsaw",
                           "itemWeight":  3,
                           "travelWeight":  3,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -291,7 +291,7 @@
                           "name":  "Recovery Gear Bag",
                           "itemWeight":  11.2,
                           "travelWeight":  11.2,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -299,7 +299,7 @@
                           "name":  "Tool Roll",
                           "itemWeight":  3,
                           "travelWeight":  3,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -307,7 +307,7 @@
                           "name":  "Spare Stone Flaps",
                           "itemWeight":  3,
                           "travelWeight":  3,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -315,7 +315,7 @@
                           "name":  "Beer (14kg/Block)",
                           "itemWeight":  14,
                           "travelWeight":  14,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  false
                       },
@@ -323,7 +323,7 @@
                           "name":  "Wine (6 Bottles) 8kg",
                           "itemWeight":  8,
                           "travelWeight":  8,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  false
                       },
@@ -331,7 +331,7 @@
                           "name":  "Generator",
                           "itemWeight":  23,
                           "travelWeight":  23,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -339,7 +339,7 @@
                           "name":  "Fuel",
                           "itemWeight":  4,
                           "travelWeight":  4,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  true
                       },
@@ -347,7 +347,7 @@
                           "name":  "BBQ",
                           "itemWeight":  10.7,
                           "travelWeight":  10.7,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  false
                       },
@@ -355,7 +355,7 @@
                           "name":  "BBQ Tool box",
                           "itemWeight":  5.5,
                           "travelWeight":  5.5,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  false
                       },
@@ -363,7 +363,7 @@
                           "name":  "Moulded Table",
                           "itemWeight":  6.8,
                           "travelWeight":  6.8,
-                          "category":  "Tub Cargo",
+                          "category":  "Vehicle Utility Tub",
                           "zone":  "tub",
                           "packed":  false
                       },
@@ -390,14 +390,6 @@
                           "category":  "Bathroom \u0026 Linen",
                           "zone":  "rearStorage",
                           "packed":  true
-                      },
-                      {
-                          "name":  "External",
-                          "itemWeight":  0,
-                          "travelWeight":  0,
-                          "category":  "Bathroom \u0026 Linen",
-                          "zone":  "rearStorage",
-                          "packed":  false
                       },
                       {
                           "name":  "Solar Panel Frame",
@@ -699,136 +691,128 @@
                           "name":  "Diesel Heater Fuel",
                           "itemWeight":  8,
                           "travelWeight":  8,
-                          "category":  "Toolbox Left",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Left",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Peg/Strap Bag",
                           "itemWeight":  4.2,
                           "travelWeight":  4.2,
-                          "category":  "Toolbox Left",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Left",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Van Accessory bag",
                           "itemWeight":  2.5,
                           "travelWeight":  2.5,
-                          "category":  "Toolbox Left",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Left",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Van Step and Small Table",
                           "itemWeight":  3.6,
                           "travelWeight":  3.6,
-                          "category":  "Toolbox Left",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Left",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Steps",
                           "itemWeight":  3,
                           "travelWeight":  3,
-                          "category":  "Toolbox Left",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Left",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Navigator Spade/Cover",
                           "itemWeight":  2,
                           "travelWeight":  2,
-                          "category":  "Toolbox Left",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Left",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "9kg Gas Bottle",
                           "itemWeight":  8.5,
                           "travelWeight":  8.5,
-                          "category":  "Toolbox Left",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Left",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "9kg Gas Bottle",
                           "itemWeight":  8.5,
                           "travelWeight":  8.5,
-                          "category":  "Toolbox Left",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Left",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Water Bucket \u0026Dustpan",
                           "itemWeight":  1,
                           "travelWeight":  1,
-                          "category":  "Toolbox Right",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Right",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Water Transfer pump",
                           "itemWeight":  4.4,
                           "travelWeight":  4.4,
-                          "category":  "Toolbox Right",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Right",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Water/Waste Hoses",
                           "itemWeight":  5,
                           "travelWeight":  5,
-                          "category":  "Toolbox Right",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Right",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Water Accessory bag",
                           "itemWeight":  2,
                           "travelWeight":  2,
-                          "category":  "Toolbox Right",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Right",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Screens",
                           "itemWeight":  5.8,
                           "travelWeight":  5.8,
-                          "category":  "Toolbox Right",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Right",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Ladder",
                           "itemWeight":  6.2,
                           "travelWeight":  6.2,
-                          "category":  "Toolbox Right",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Right",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "Muk Mats",
                           "itemWeight":  2,
                           "travelWeight":  2,
-                          "category":  "Toolbox Right",
-                          "zone":  "frontStorage",
+                          "category":  "A-Frame Right",
+                          "zone":  "aFrame",
                           "packed":  true
                       },
                       {
                           "name":  "TBM Gauge \u0026 Tools",
                           "itemWeight":  8.6,
                           "travelWeight":  8.6,
-                          "category":  "Toolbox Right",
-                          "zone":  "frontStorage",
-                          "packed":  true
-                      },
-                      {
-                          "name":  "Pantry Provisions \u0026 Mid Supplies",
-                          "itemWeight":  33.8,
-                          "travelWeight":  33.8,
-                          "category":  "Dining \u0026 Pantry",
-                          "zone":  "midStorage",
+                          "category":  "A-Frame Right",
+                          "zone":  "aFrame",
                           "packed":  true
                       }
                   ]

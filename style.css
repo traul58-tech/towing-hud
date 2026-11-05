@@ -1095,25 +1095,43 @@ body.daylight-mode .hud-slider {
 .balancer-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
-.balancer-btn {
+.balancer-pill, .balancer-btn {
   font-size: 11px;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-subtle);
   color: var(--text-main);
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 1 1 calc(50% - 8px);
+  min-width: 130px;
+  box-sizing: border-box;
 }
 
-.balancer-btn:hover {
+body.daylight-mode .balancer-pill, body.daylight-mode .balancer-btn {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.balancer-pill:hover, .balancer-btn:hover,
+.balancer-pill:active, .balancer-btn:active {
   background: rgba(0, 242, 254, 0.15);
   border-color: var(--accent-cyan);
   color: var(--accent-cyan);
+}
+
+.balancer-pill .sub, .balancer-btn .sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 /* Right Side: Telemetry Diagnostics & Safety Advisor */
@@ -1262,11 +1280,15 @@ body.daylight-mode .advisor-item {
 
 .search-input-wrap {
   position: relative;
-  min-width: 280px;
+  min-width: 0;
+  flex: 1 1 240px;
+  max-width: 100%;
 }
 
 .search-input {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-subtle);
   color: var(--text-main);
@@ -1321,8 +1343,11 @@ body.daylight-mode .search-input {
 .inv-table-wrap {
   max-height: 440px;
   overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  width: 100%;
 }
 
 .inv-table {
@@ -1468,6 +1493,8 @@ body.daylight-mode .inv-table td {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
 }
 
 .form-group label {
@@ -1476,6 +1503,7 @@ body.daylight-mode .inv-table td {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  word-break: break-word;
 }
 
 .form-group input, .form-group select {
@@ -1484,9 +1512,13 @@ body.daylight-mode .inv-table td {
   border-radius: var(--radius-sm);
   color: var(--text-main);
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 13.5px;
   font-family: var(--font-mono);
   outline: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 body.daylight-mode .form-group input, body.daylight-mode .form-group select {
@@ -1504,6 +1536,418 @@ body.daylight-mode .form-group input, body.daylight-mode .form-group select {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+}
+
+/* ==========================================================================
+   Responsive & Mobile Android Viewport Optimization
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .hud-app-container {
+    padding: 16px 16px 60px;
+    gap: 18px;
+  }
+
+  .hud-header {
+    padding: 14px 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hud-app-container {
+    padding: 12px 12px 60px;
+    gap: 16px;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .hud-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .brand-section {
+    width: 100%;
+  }
+
+  .rig-selector-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .select-card {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .select-card select {
+    width: 100%;
+    max-width: 100%;
+    text-overflow: ellipsis;
+  }
+
+  .header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .header-actions .hud-btn {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    padding: 9px 8px;
+    font-size: 11.5px;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .section-head > div:first-child {
+    width: 100%;
+  }
+
+  .blueprint-controls {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .view-toggle-group {
+    width: 100%;
+    display: flex;
+  }
+
+  .view-toggle-group .toggle-pill {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+  }
+
+  .photo-overlay-controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .photo-overlay-controls .hud-btn,
+  .photo-overlay-controls .toggle-pill {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    font-size: 11px;
+    padding: 6px 4px;
+  }
+}
+
+@media (max-width: 600px) {
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  .hud-app-container {
+    padding: 8px 8px 50px;
+    gap: 12px;
+  }
+
+  .hud-header {
+    padding: 12px 10px;
+    border-radius: var(--radius-md);
+  }
+
+  .hud-logo-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .brand-title-wrap h1 {
+    font-size: 14.5px;
+    letter-spacing: 0.5px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .brand-sub {
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+
+  .gauge-card {
+    padding: 14px 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .gauge-footer {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .card-panel, .rig-diagram-section, .inventory-section {
+    padding: 14px 10px;
+    border-radius: var(--radius-md);
+    gap: 12px;
+  }
+
+  .storage-zones-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .zone-control-card {
+    padding: 10px 12px;
+  }
+
+  .zone-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .zone-title {
+    font-size: 12.5px;
+    word-break: break-word;
+  }
+
+  .zone-weights-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .zone-slider-wrap {
+    gap: 8px;
+  }
+
+  .hud-slider {
+    height: 8px;
+  }
+
+  .hud-slider::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+
+  .quick-tank-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tank-btn-group {
+    flex: 1 1 auto;
+    display: flex;
+    gap: 4px;
+  }
+
+  .tank-pill {
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 5px 6px;
+    font-size: 10.5px;
+  }
+
+  .water-balancer-box {
+    padding: 10px;
+  }
+
+  .balancer-pills {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .balancer-pill, .balancer-btn {
+    min-width: 0;
+    width: 100%;
+    padding: 7px 8px;
+  }
+
+  /* Telemetry Compliance Cards - 2-Tier Stacked Layout for Zero Overflow */
+  .telemetry-row-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .telemetry-row-left {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .telemetry-title {
+    font-size: 12.5px;
+    word-break: break-word;
+  }
+
+  .telemetry-detail {
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .telemetry-row-right {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  }
+
+  body.daylight-mode .telemetry-row-right {
+    border-top-color: rgba(0, 0, 0, 0.08);
+  }
+
+  .telemetry-nums {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    text-align: left;
+  }
+
+  .telemetry-curr {
+    font-size: 14.5px;
+  }
+
+  .telemetry-cap {
+    font-size: 11px;
+  }
+
+  .advisor-item {
+    font-size: 11.5px;
+    padding: 8px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .inventory-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .search-input-wrap {
+    width: 100%;
+  }
+
+  .inv-category-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    width: 100%;
+  }
+
+  .inv-tab {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    padding: 5px 10px;
+  }
+
+  .inv-table {
+    min-width: 520px;
+  }
+
+  .inv-table th, .inv-table td {
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+
+  /* Modals Optimization for Mobile Android */
+  .hud-modal-overlay {
+    padding: 8px;
+    align-items: center;
+  }
+
+  .hud-modal-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 94vh;
+    border-radius: var(--radius-md);
+  }
+
+  .modal-header {
+    padding: 12px 14px;
+  }
+
+  .modal-header h3 {
+    font-size: 13.5px;
+    letter-spacing: 0.5px;
+  }
+
+  .modal-body {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .modal-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .form-group label {
+    font-size: 10.5px;
+  }
+
+  .form-group input, .form-group select {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .modal-footer {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .modal-footer .hud-btn {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    padding: 9px 8px;
+  }
+
+  #tank-impact-summary {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    font-size: 11.5px;
+    padding: 8px 10px !important;
+  }
+
+  #tank1-config-box, #tank2-config-box {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .balancer-pills {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions .hud-btn {
+    font-size: 11px;
+    padding: 8px;
+  }
 }
 
 /* Printable Weighbridge Manifest Styling */
