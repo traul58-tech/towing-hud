@@ -295,62 +295,48 @@
 
         <!-- Water Tank Balancer Presets -->
         <div class="water-balancer-box">
-          <h4>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-            Water Ballast Presets (Dual 95L Tanks)
-          </h4>
-          <div class="balancer-pills">
-            <button class="balancer-btn" onclick="setWaterPreset('both-full')">💧 Both Full (190L)</button>
-            <button class="balancer-btn" onclick="setWaterPreset('front-full-rear-dry')">⬆ Front Full / Rear Dry (+Ball)</button>
-            <button class="balancer-btn" onclick="setWaterPreset('both-dry')">⚪ Both Dry (0L - Empty)</button>
-            <button class="balancer-btn" onclick="setWaterPreset('front-dry-rear-full')">⬇ Front Dry / Rear Full (-Ball)</button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 8px;">
+            <h4 style="margin: 0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+              <span id="water-balancer-title">Water Ballast & Tank Management</span>
+            </h4>
+            <button class="hud-btn" type="button" onclick="openTankAxleModal()" title="Configure single or dual water tanks and axle placement">
+              ⚙️ Tank & Axle Setup
+            </button>
+          </div>
+          <div id="water-balancer-pills" class="balancer-pills">
+            <!-- Dynamically populated from app.js -->
           </div>
         </div>
 
-        <!-- 8 Storage Zones Grid -->
+        <!-- 7 Storage Zones Grid -->
         <div class="storage-zones-grid">
 
-          <!-- 1. Toolbox (+3.75m) -->
-          <div id="card-toolbox" class="zone-control-card">
-            <div class="zone-header">
-              <span class="zone-title">Toolbox / A-Frame</span>
-              <span class="lever-arm-tag front">+3.75 m</span>
-            </div>
-            <div class="zone-weights-row">
-              <span id="weight-toolbox" class="zone-total-kg">0 kg</span>
-              <span class="zone-breakdown-sub">+0.75kg ball / kg</span>
-            </div>
-            <div class="zone-slider-wrap">
-              <input id="slider-toolbox" type="range" class="hud-slider" min="-50" max="100" step="1" value="0">
-              <span id="offset-toolbox" class="slider-offset-display">0 kg</span>
-            </div>
-          </div>
-
-          <!-- 2. Front Storage / Tunnel Boot (+3.0m) -->
+          <!-- 1. Front Storage (+3.0m) -->
           <div id="card-frontStorage" class="zone-control-card">
             <div class="zone-header">
-              <span class="zone-title">Tunnel Boot / Front Bed</span>
+              <span class="zone-title">Front Storage</span>
               <span class="lever-arm-tag front">+3.00 m</span>
             </div>
             <div class="zone-weights-row">
-              <span id="weight-frontStorage" class="zone-total-kg">0 kg</span>
+              <span id="weight-frontStorage" class="zone-total-kg">154 kg</span>
               <span class="zone-breakdown-sub">+0.60kg ball / kg</span>
             </div>
             <div class="zone-slider-wrap">
-              <input id="slider-frontStorage" type="range" class="hud-slider" min="-50" max="100" step="1" value="0">
+              <input id="slider-frontStorage" type="range" class="hud-slider" min="-80" max="120" step="1" value="0">
               <span id="offset-frontStorage" class="slider-offset-display">0 kg</span>
             </div>
           </div>
 
-          <!-- 3. Front Water Tank (+1.8m) -->
+          <!-- 2. Front Water Tank -->
           <div id="card-frontTank" class="zone-control-card">
             <div class="zone-header">
-              <span class="zone-title">Front Water Tank</span>
-              <span class="lever-arm-tag front">+1.80 m</span>
+              <span id="title-frontTank" class="zone-title">Front Water Tank</span>
+              <span id="tag-frontTank" class="lever-arm-tag front">+1.80 m</span>
             </div>
             <div class="zone-weights-row">
               <span id="weight-frontTank" class="zone-total-kg">0 kg</span>
-              <span class="zone-breakdown-sub">+0.36kg ball / kg</span>
+              <span id="sub-frontTank" class="zone-breakdown-sub">+0.36kg ball / kg</span>
             </div>
             <div class="zone-slider-wrap">
               <input id="slider-frontTank" type="range" class="hud-slider" min="-95" max="50" step="5" value="0">
@@ -358,7 +344,7 @@
             </div>
             <div class="quick-tank-bar">
               <span style="font-size: 10px; color: var(--text-dim);">Quick Set:</span>
-              <div class="tank-btn-group">
+              <div id="quick-group-frontTank" class="tank-btn-group">
                 <button class="tank-pill" onclick="setQuickTank('frontTank', 0)">0L</button>
                 <button class="tank-pill" onclick="setQuickTank('frontTank', 45)">45L</button>
                 <button class="tank-pill" onclick="setQuickTank('frontTank', 95)">95L</button>
@@ -366,7 +352,7 @@
             </div>
           </div>
 
-          <!-- 4. Mid Internal Storage (0.0m) -->
+          <!-- 3. Mid Internal Storage (0.0m) -->
           <div id="card-midStorage" class="zone-control-card">
             <div class="zone-header">
               <span class="zone-title">Mid Kitchen & Dining</span>
@@ -382,15 +368,15 @@
             </div>
           </div>
 
-          <!-- 5. Rear Water Tank (-1.5m) -->
+          <!-- 4. Rear Water Tank -->
           <div id="card-rearTank" class="zone-control-card">
             <div class="zone-header">
-              <span class="zone-title">Rear Water Tank</span>
-              <span class="lever-arm-tag rear">-1.50 m</span>
+              <span id="title-rearTank" class="zone-title">Rear Water Tank</span>
+              <span id="tag-rearTank" class="lever-arm-tag rear">-1.50 m</span>
             </div>
             <div class="zone-weights-row">
               <span id="weight-rearTank" class="zone-total-kg">0 kg</span>
-              <span class="zone-breakdown-sub">-0.30kg ball / kg</span>
+              <span id="sub-rearTank" class="zone-breakdown-sub">-0.30kg ball / kg</span>
             </div>
             <div class="zone-slider-wrap">
               <input id="slider-rearTank" type="range" class="hud-slider" min="-95" max="50" step="5" value="0">
@@ -398,7 +384,7 @@
             </div>
             <div class="quick-tank-bar">
               <span style="font-size: 10px; color: var(--text-dim);">Quick Set:</span>
-              <div class="tank-btn-group">
+              <div id="quick-group-rearTank" class="tank-btn-group">
                 <button class="tank-pill" onclick="setQuickTank('rearTank', 0)">0L</button>
                 <button class="tank-pill" onclick="setQuickTank('rearTank', 45)">45L</button>
                 <button class="tank-pill" onclick="setQuickTank('rearTank', 95)">95L</button>
@@ -515,8 +501,7 @@
           <button class="inv-tab active" data-filter="all">All Items</button>
           <button class="inv-tab" data-filter="vehicle">Tow Vehicle</button>
           <button class="inv-tab" data-filter="van">Caravan Only</button>
-          <button class="inv-tab" data-filter="toolbox">Toolbox</button>
-          <button class="inv-tab" data-filter="frontStorage">Tunnel Boot</button>
+          <button class="inv-tab" data-filter="frontStorage">Front Storage</button>
           <button class="inv-tab" data-filter="midStorage">Kitchen/Mid</button>
           <button class="inv-tab" data-filter="rearStorage">Rear Storage</button>
         </div>
@@ -645,11 +630,106 @@
             <label>Axle Center to Tow Hitch Distance L (m)</label>
             <input id="modal-van-hitch" type="number" step="0.1">
           </div>
+          <div class="form-group" style="grid-column: span 2; margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--border-subtle);">
+            <button type="button" class="hud-btn" onclick="openTankAxleModal()" style="width: 100%;">
+              ⚙️ Configure Axles &amp; Water Tanks (Single/Tandem Axle &amp; Tanks Setup)
+            </button>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
         <button class="hud-btn" onclick="closeModal('caravan-modal')">Cancel</button>
         <button class="hud-btn primary" onclick="saveCaravanModal()">Save Caravan Specs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Caravan Axles & Water Tanks Architecture Modal -->
+  <div id="tank-axle-modal" class="hud-modal-overlay">
+    <div class="hud-modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>Caravan Axles &amp; Water Tanks Architecture</h3>
+        <button class="modal-close-btn" onclick="closeModal('tank-axle-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- 1. Axle Configuration -->
+        <div class="form-group">
+          <label style="font-weight: 800; color: var(--accent-cyan);">1. Caravan Axle Architecture</label>
+          <div class="view-toggle-group" style="margin-top: 6px; width: 100%; display: flex;">
+            <button id="opt-axle-tandem" class="toggle-pill active" type="button" onclick="setModalAxleType('tandem')" style="flex: 1; text-align: center;">
+              🚛 Tandem Dual Axles
+            </button>
+            <button id="opt-axle-single" class="toggle-pill" type="button" onclick="setModalAxleType('single')" style="flex: 1; text-align: center;">
+              🚜 Single Heavy-Duty Axle
+            </button>
+          </div>
+          <div class="field-hint" style="font-size: 11px; color: var(--text-dim); margin-top: 5px;">
+            Dual tandem axles spread road load across 4 tyres; single axle caravans pivot on a single central fulcrum.
+          </div>
+        </div>
+
+        <!-- 2. Water Tank Layout Preset Selector -->
+        <div class="form-group" style="margin-top: 14px;">
+          <label style="font-weight: 800; color: var(--accent-cyan);">2. Water Tank Layout Preset</label>
+          <select id="modal-tank-preset" class="search-input" onchange="onModalTankPresetChange()" style="width: 100%; margin-top: 6px;">
+            <option value="dual">Dual Tanks: Front Tank + Rear Tank (Balanced Tourer)</option>
+            <option value="single-front">Single Tank: Forward of Axle (+1.50m)</option>
+            <option value="single-center">Single Tank: Directly Over Axle (0.00m - Zero Hitch Impact)</option>
+            <option value="single-rear">Single Tank: Rearward of Axle (-1.50m)</option>
+            <option value="custom">Custom Configuration (Custom Capacities &amp; Positions)</option>
+          </select>
+        </div>
+
+        <!-- 3. Detailed Tank 1 & Tank 2 Specifications -->
+        <div class="modal-grid-2" style="margin-top: 14px; gap: 14px;">
+          
+          <!-- Tank 1 (Front/Primary) -->
+          <div id="tank1-config-box" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label style="font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 6px; margin: 0;">
+                <input type="checkbox" id="modal-tank1-enable" onchange="toggleModalTankFields()"> Tank 1 (Front / Primary)
+              </label>
+            </div>
+            <div class="form-group" style="margin-bottom: 8px;">
+              <label style="font-size: 11px;">Capacity (Litres)</label>
+              <input type="number" id="modal-tank1-cap" min="20" max="250" step="5" value="95" oninput="updateTankModalSummary()">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 11px;">Distance from Axle Center (m)</label>
+              <input type="number" id="modal-tank1-arm" step="0.05" value="1.80" oninput="updateTankModalSummary()">
+              <div style="font-size: 10px; color: var(--text-dim); margin-top: 3px;">Positive (+) = Forward of axle</div>
+            </div>
+          </div>
+
+          <!-- Tank 2 (Rear/Secondary) -->
+          <div id="tank2-config-box" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <label style="font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 6px; margin: 0;">
+                <input type="checkbox" id="modal-tank2-enable" onchange="toggleModalTankFields()"> Tank 2 (Rear / Secondary)
+              </label>
+            </div>
+            <div class="form-group" style="margin-bottom: 8px;">
+              <label style="font-size: 11px;">Capacity (Litres)</label>
+              <input type="number" id="modal-tank2-cap" min="20" max="250" step="5" value="95" oninput="updateTankModalSummary()">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 11px;">Distance from Axle Center (m)</label>
+              <input type="number" id="modal-tank2-arm" step="0.05" value="-1.50" oninput="updateTankModalSummary()">
+              <div style="font-size: 10px; color: var(--text-dim); margin-top: 3px;">Negative (-) = Rearward of axle</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Impact Preview Banner -->
+        <div id="tank-impact-summary" style="margin-top: 14px; padding: 10px 14px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8; border-radius: 4px; font-size: 12px; line-height: 1.5;">
+          <!-- Dynamically populated from JavaScript -->
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="hud-btn" onclick="closeModal('tank-axle-modal')">Cancel</button>
+        <button class="hud-btn primary" onclick="saveTankAxleModal()">Apply Configuration</button>
       </div>
     </div>
   </div>
@@ -674,8 +754,7 @@
           <div class="form-group">
             <label>Storage Location</label>
             <select id="new-item-zone">
-              <option value="toolbox">Toolbox (+3.75m)</option>
-              <option value="frontStorage">Tunnel Boot (+3.0m)</option>
+              <option value="frontStorage">Front Storage (+3.0m)</option>
               <option value="frontTank">Front Water Tank (+1.8m)</option>
               <option value="midStorage">Mid Internal Storage (0.0m)</option>
               <option value="rearTank">Rear Water Tank (-1.5m)</option>

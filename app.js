@@ -3,14 +3,34 @@
  * Matches Universal_Towing_Calculator.xlsm physics & moment balance equations
  */
 
+// Caravan Axles & Water Tanks Architecture Defaults
+const DEFAULT_CARAVAN_CONFIG = {
+  axleType: 'tandem', // 'tandem' | 'single'
+  tankMode: 'dual',   // 'dual' | 'single-front' | 'single-center' | 'single-rear' | 'custom'
+  frontTank: {
+    enabled: true,
+    name: 'Front Water Tank',
+    capacity: 95,
+    leverArm: 1.80
+  },
+  rearTank: {
+    enabled: true,
+    name: 'Rear Water Tank',
+    capacity: 95,
+    leverArm: -1.50
+  }
+};
+
 // Global State
 let state = {
   currentVehicleId: 'mitsubishi-triton-next-gen-mv',
   currentCaravanId: 'tandem-van',
   
+  // Dynamic caravan architecture configuration
+  caravanConfig: null,
+  
   // Storage Offsets (Simulation Sliders - Excel Col E)
   sliderOffsets: {
-    toolbox: 0,
     frontStorage: 0,
     frontTank: 0,
     midStorage: 0,
@@ -44,7 +64,6 @@ let state = {
 
 // Lever Arms in meters relative to caravan axle center
 const LEVER_ARMS = {
-  toolbox: 3.75,
   frontStorage: 3.00,
   frontTank: 1.80,
   midStorage: 0.00,
@@ -52,10 +71,26 @@ const LEVER_ARMS = {
   rearStorage: -2.25
 };
 
+// Safe retrieval and initialization of caravan configuration
+function getCaravanConfig() {
+  if (!state.caravanConfig) {
+    state.caravanConfig = JSON.parse(JSON.stringify(DEFAULT_CARAVAN_CONFIG));
+  }
+  if (!state.caravanConfig.axleType) state.caravanConfig.axleType = 'tandem';
+  if (!state.caravanConfig.tankMode) state.caravanConfig.tankMode = 'dual';
+  if (!state.caravanConfig.frontTank) state.caravanConfig.frontTank = { ...DEFAULT_CARAVAN_CONFIG.frontTank };
+  if (!state.caravanConfig.rearTank) state.caravanConfig.rearTank = { ...DEFAULT_CARAVAN_CONFIG.rearTank };
+  if (typeof state.caravanConfig.frontTank.capacity !== 'number') state.caravanConfig.frontTank.capacity = 95;
+  if (typeof state.caravanConfig.frontTank.leverArm !== 'number') state.caravanConfig.frontTank.leverArm = 1.80;
+  if (typeof state.caravanConfig.rearTank.capacity !== 'number') state.caravanConfig.rearTank.capacity = 95;
+  if (typeof state.caravanConfig.rearTank.leverArm !== 'number') state.caravanConfig.rearTank.leverArm = -1.50;
+  return state.caravanConfig;
+}
+
 // Initialize Application
 function initApp() {
-  // Load data from DEFAULT_TOWING_DATA
-  if (typeof DEFAULT_TOWING_DATA !== 'undefined') {
+  // Load baseline inventory from DEFAULT_TOWING_DATA
+  if (typeof DEFAULT_TOWING_DATA !== 'undefined' && DEFAULT_TOWING_DATA.inventory) {
     state.inventory = JSON.parse(JSON.stringify(DEFAULT_TOWING_DATA.inventory));
   }
   
@@ -66,8 +101,29 @@ function initApp() {
       const parsed = JSON.parse(saved);
       if (parsed.currentVehicleId) state.currentVehicleId = parsed.currentVehicleId;
       if (parsed.currentCaravanId) state.currentCaravanId = parsed.currentCaravanId;
-      if (parsed.sliderOffsets) state.sliderOffsets = { ...state.sliderOffsets, ...parsed.sliderOffsets };
-      if (parsed.inventory && parsed.inventory.length > 0) state.inventory = parsed.inventory;
+      if (parsed.caravanConfig) {
+        state.caravanConfig = parsed.caravanConfig;
+        const cfg = getCaravanConfig();
+        LEVER_ARMS.frontTank = cfg.frontTank.leverArm;
+        LEVER_ARMS.rearTank = cfg.rearTank.leverArm;
+      }
+      if (parsed.sliderOffsets) {
+        state.sliderOffsets = { ...state.sliderOffsets, ...parsed.sliderOffsets };
+        // Migrate legacy toolbox slider offset into frontStorage if present
+        if (parsed.sliderOffsets.toolbox) {
+          state.sliderOffsets.frontStorage = (state.sliderOffsets.frontStorage || 0) + parsed.sliderOffsets.toolbox;
+          delete state.sliderOffsets.toolbox;
+        }
+      }
+      if (parsed.inventory && parsed.inventory.length > 0) {
+        // Preserve user's inventory and remap any legacy 'toolbox' items to 'frontStorage'
+        state.inventory = parsed.inventory.map(item => {
+          if (item.zone === 'toolbox') {
+            return { ...item, zone: 'frontStorage' };
+          }
+          return item;
+        });
+      }
       if (parsed.customVehicle) state.customVehicle = parsed.customVehicle;
       if (parsed.customCaravan) state.customCaravan = parsed.customCaravan;
       if (parsed.rigViewMode) state.rigViewMode = parsed.rigViewMode;
@@ -114,12 +170,12 @@ function getActiveCaravan() {
 
 // Compute Zone Weights from Packed Inventory Items
 function getZoneBaseWeights() {
+  const cfg = getCaravanConfig();
   const totals = {
-    toolbox: 0,
     frontStorage: 0,
-    frontTank: 95, // Default water tank capacity
+    frontTank: cfg.frontTank && cfg.frontTank.enabled ? (cfg.frontTank.capacity || 95) : 0,
     midStorage: 0,
-    rearTank: 95,  // Default water tank capacity
+    rearTank: cfg.rearTank && cfg.rearTank.enabled ? (cfg.rearTank.capacity || 95) : 0,
     rearStorage: 0,
     cabin: 0,
     tub: 0
@@ -141,27 +197,31 @@ function getZoneBaseWeights() {
 function computePhysics() {
   const vehicle = getActiveVehicle();
   const caravan = getActiveCaravan();
+  const cfg = getCaravanConfig();
+
+  // Dynamic lever arms from caravan configuration
+  if (cfg.frontTank) LEVER_ARMS.frontTank = cfg.frontTank.leverArm;
+  if (cfg.rearTank) LEVER_ARMS.rearTank = cfg.rearTank.leverArm;
+
   const baseWeights = getZoneBaseWeights();
   
   // Total Effective Zone Weights = Base + Slider Offset
   const zones = {
-    toolbox: Math.max(0, baseWeights.toolbox + (state.sliderOffsets.toolbox || 0)),
     frontStorage: Math.max(0, baseWeights.frontStorage + (state.sliderOffsets.frontStorage || 0)),
-    frontTank: Math.max(0, baseWeights.frontTank + (state.sliderOffsets.frontTank || 0)),
+    frontTank: (cfg.frontTank && cfg.frontTank.enabled) ? Math.max(0, baseWeights.frontTank + (state.sliderOffsets.frontTank || 0)) : 0,
     midStorage: Math.max(0, baseWeights.midStorage + (state.sliderOffsets.midStorage || 0)),
-    rearTank: Math.max(0, baseWeights.rearTank + (state.sliderOffsets.rearTank || 0)),
+    rearTank: (cfg.rearTank && cfg.rearTank.enabled) ? Math.max(0, baseWeights.rearTank + (state.sliderOffsets.rearTank || 0)) : 0,
     rearStorage: Math.max(0, baseWeights.rearStorage + (state.sliderOffsets.rearStorage || 0)),
     cabin: Math.max(0, baseWeights.cabin + (state.sliderOffsets.cabin || 0)),
     tub: Math.max(0, baseWeights.tub + (state.sliderOffsets.tub || 0))
   };
 
   // Caravan Storage Load Total
-  const caravanCargoTotal = zones.toolbox + zones.frontStorage + zones.frontTank + 
+  const caravanCargoTotal = zones.frontStorage + zones.frontTank + 
                             zones.midStorage + zones.rearTank + zones.rearStorage;
   
   // Moment balance around caravan axle center (kg * m)
-  const momentsSum = (zones.toolbox * LEVER_ARMS.toolbox) +
-                     (zones.frontStorage * LEVER_ARMS.frontStorage) +
+  const momentsSum = (zones.frontStorage * LEVER_ARMS.frontStorage) +
                      (zones.frontTank * LEVER_ARMS.frontTank) +
                      (zones.midStorage * LEVER_ARMS.midStorage) +
                      (zones.rearTank * LEVER_ARMS.rearTank) +
@@ -349,6 +409,7 @@ function setComplianceBadge(id, statusClass) {
 function renderRigBlueprint(p) {
   const svg = document.getElementById('rig-blueprint-svg');
   if (!svg) return;
+  const cfg = getCaravanConfig();
 
   const faKg = Math.round(p.frontAxleLoad);
   const raKg = Math.round(p.rearAxleLoad);
@@ -364,6 +425,111 @@ function renderRigBlueprint(p) {
   // Front axle lift check (steering grip)
   const faDelta = faKg - p.vehicle.frontAxleTare;
   const faGripText = faDelta < 0 ? `LIFT: ${faDelta}kg (LIGHT STEERING)` : `+${faDelta}kg Positive Grip`;
+
+  const isSingleAxle = cfg.axleType === 'single';
+
+  // Caravan Body Silhouette & Skirts depending on single vs tandem axle
+  let vanBodyPath = '';
+  let skirtsSvg = '';
+  let wheelsSvg = '';
+  let fulcrumLabel = '';
+  let gtmCardTitle = '';
+
+  if (isSingleAxle) {
+    // Single Heavy-Duty Axle centered at X=850, cutout from 805 to 895
+    vanBodyPath = `
+      M 600,218 
+      Q 615,145 640,112 
+      Q 660,95 685,95 
+      L 1035,95 
+      Q 1055,95 1055,115 
+      L 1055,195 
+      L 1035,218 
+      L 895,218 
+      Q 895,186 880,186 
+      L 820,186 
+      Q 805,186 805,218 
+      L 600,218 Z
+    `;
+    skirtsSvg = `
+      <path d="M 600,218 L 610,186 L 805,186 L 805,218 Z" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1"/>
+      <path d="M 895,218 L 895,186 L 1035,186 L 1035,218 Z" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1"/>
+    `;
+    wheelsSvg = `
+      <!-- Single Heavy-Duty Axle Wheel (Centered at X=850) -->
+      <circle cx="850" cy="222" r="32" fill="#0b0f19" stroke="#64748b" stroke-width="4.5"/>
+      <circle cx="850" cy="222" r="15" fill="#1e293b" stroke="#38bdf8" stroke-width="2.2"/>
+    `;
+    fulcrumLabel = 'SINGLE AXLE FULCRUM (0.0m)';
+    gtmCardTitle = 'CARAVAN SINGLE TYRES (GTM)';
+  } else {
+    // Tandem Dual Axles at X=815 and X=885, cutout from 775 to 925
+    vanBodyPath = `
+      M 600,218 
+      Q 615,145 640,112 
+      Q 660,95 685,95 
+      L 1035,95 
+      Q 1055,95 1055,115 
+      L 1055,195 
+      L 1035,218 
+      L 925,218 
+      Q 925,186 910,186 
+      L 790,186 
+      Q 775,186 775,218 
+      L 600,218 Z
+    `;
+    skirtsSvg = `
+      <path d="M 600,218 L 610,186 L 775,186 L 775,218 Z" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1"/>
+      <path d="M 925,218 L 925,186 L 1035,186 L 1035,218 Z" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1"/>
+    `;
+    wheelsSvg = `
+      <!-- Caravan Tandem Wheels (Axle Center at X=850) -->
+      <circle cx="815" cy="222" r="30" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
+      <circle cx="815" cy="222" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+      <circle cx="885" cy="222" r="30" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
+      <circle cx="885" cy="222" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+    `;
+    fulcrumLabel = 'TANDEM AXLE FULCRUM (0.0m)';
+    gtmCardTitle = 'CARAVAN TANDEM TYRES (GTM)';
+  }
+
+  // Dynamic Water Tank Pins
+  let waterPinsSvg = '';
+  
+  if (cfg.frontTank && cfg.frontTank.enabled) {
+    const fwX = Math.round(850 - (cfg.frontTank.leverArm * 60));
+    const armStr = cfg.frontTank.leverArm === 0 ? '0.0m Axle' : (cfg.frontTank.leverArm > 0 ? `+${cfg.frontTank.leverArm.toFixed(2)}m` : `${cfg.frontTank.leverArm.toFixed(2)}m`);
+    const pinCode = cfg.tankMode && cfg.tankMode.startsWith('single') ? 'WT' : 'FW';
+    waterPinsSvg += `
+      <!-- Front / Primary Water Tank (${armStr}) -->
+      <g transform="translate(${fwX}, 180)" class="pin-node" onclick="focusZone('frontTank')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#38bdf8" font-size="9" font-weight="900" text-anchor="middle">${pinCode}</text>
+        <g transform="translate(0, 18)">
+          <rect x="-42" y="0" width="84" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#38bdf8" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">${armStr} Tank</text>
+          <text x="0" y="20" fill="#38bdf8" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.frontTank)} L</text>
+        </g>
+      </g>
+    `;
+  }
+
+  if (cfg.rearTank && cfg.rearTank.enabled) {
+    const rwX = Math.round(850 - (cfg.rearTank.leverArm * 60));
+    const armStr = cfg.rearTank.leverArm === 0 ? '0.0m Axle' : (cfg.rearTank.leverArm > 0 ? `+${cfg.rearTank.leverArm.toFixed(2)}m` : `${cfg.rearTank.leverArm.toFixed(2)}m`);
+    waterPinsSvg += `
+      <!-- Rear Water Tank (${armStr}) -->
+      <g transform="translate(${rwX}, 180)" class="pin-node" onclick="focusZone('rearTank')" style="cursor: pointer;">
+        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" filter="url(#neonGlow)"/>
+        <text x="0" y="4" fill="#38bdf8" font-size="9" font-weight="900" text-anchor="middle">RW</text>
+        <g transform="translate(0, 18)">
+          <rect x="-42" y="0" width="84" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#38bdf8" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">${armStr} Tank</text>
+          <text x="0" y="20" fill="#38bdf8" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.rearTank)} L</text>
+        </g>
+      </g>
+    `;
+  }
 
   svg.innerHTML = `
     <defs>
@@ -479,23 +645,10 @@ function renderRigBlueprint(p) {
       <line x1="825" y1="89" x2="875" y2="89" stroke="#64748b" stroke-width="1" stroke-dasharray="3,2"/>
 
       <!-- Caravan Main Body (Authentic Aussie Offroad/Touring Design - No Ugly Rear Arch!) -->
-      <path d="M 600,218 
-               Q 615,145 640,112 
-               Q 660,95 685,95 
-               L 1035,95 
-               Q 1055,95 1055,115 
-               L 1055,195 
-               L 1035,218 
-               L 925,218 
-               Q 925,186 910,186 
-               L 790,186 
-               Q 775,186 775,218 
-               L 600,218 Z" 
-            fill="url(#bodyGradVan)" stroke="#38bdf8" stroke-width="2"/>
+      <path d="${vanBodyPath}" fill="url(#bodyGradVan)" stroke="#38bdf8" stroke-width="2"/>
 
       <!-- Lower Checkerplate Protective Skirt (Front and Rear of Wheels) -->
-      <path d="M 600,218 L 610,186 L 775,186 L 775,218 Z" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1"/>
-      <path d="M 925,218 L 925,186 L 1035,186 L 1035,218 Z" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1"/>
+      ${skirtsSvg}
 
       <!-- Modern Tinted Double-Glazed Windows -->
       <rect x="665" y="108" width="78" height="38" rx="4" fill="rgba(56, 189, 248, 0.18)" stroke="#38bdf8" stroke-width="1.2"/>
@@ -518,17 +671,13 @@ function renderRigBlueprint(p) {
       <circle cx="1075" cy="172" r="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
       <line x1="1055" y1="180" x2="1075" y2="180" stroke="#64748b" stroke-width="3"/>
 
-      <!-- Caravan Tandem Wheels (Axle Center at X=850) -->
-      <circle cx="815" cy="222" r="30" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
-      <circle cx="815" cy="222" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
-
-      <circle cx="885" cy="222" r="30" fill="#0b0f19" stroke="#64748b" stroke-width="4"/>
-      <circle cx="885" cy="222" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+      <!-- Caravan Wheels (Single or Tandem) -->
+      ${wheelsSvg}
 
       <!-- Axle Center Fulcrum (Pivot point for moment arms) -->
       <line x1="850" y1="75" x2="850" y2="250" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>
       <polygon points="850,250 844,260 856,260" fill="#00f2fe"/>
-      <text x="850" y="70" fill="#00f2fe" font-size="10" font-weight="700" text-anchor="middle">AXLE FULCRUM (0.0m)</text>
+      <text x="850" y="70" fill="#00f2fe" font-size="10" font-weight="700" text-anchor="middle">${fulcrumLabel}</text>
 
       <!-- Hitch Distance Line L -->
       <line x1="490" y1="238" x2="850" y2="238" stroke="#38bdf8" stroke-width="1.5"/>
@@ -537,45 +686,26 @@ function renderRigBlueprint(p) {
       <!-- Ground Axle GTM Load Callout -->
       <g transform="translate(850, 260)">
         <rect x="-70" y="0" width="140" height="46" rx="6" fill="#0f172a" stroke="${gtmColor}" stroke-width="1.5"/>
-        <text x="0" y="14" fill="#94a3b8" font-size="9" font-weight="800" text-anchor="middle">CARAVAN TYRES (GTM)</text>
+        <text x="0" y="14" fill="#94a3b8" font-size="9" font-weight="800" text-anchor="middle">${gtmCardTitle}</text>
         <text x="0" y="29" fill="${gtmColor}" font-size="12" font-family="Consolas, monospace" font-weight="900" text-anchor="middle">${gtmKg} kg / ${p.caravan.maxGtm || '--'}kg</text>
         <text x="0" y="40" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">ATM: ${Math.round(p.trailerATM)} kg</text>
       </g>
 
       <!-- ================= STORAGE ZONE PINS (UNCLUTTERED & STAGGERED) ================= -->
       
-      <!-- Toolbox (+3.75m) on Drawbar -->
-      <g transform="translate(565, 168)" class="pin-node" onclick="focusZone('toolbox')" style="cursor: pointer;">
-        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#00e676" stroke-width="2.5" filter="url(#neonGlow)"/>
-        <text x="0" y="4" fill="#00e676" font-size="9" font-weight="900" text-anchor="middle">TB</text>
-        <g transform="translate(0, 18)">
-          <rect x="-42" y="0" width="84" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#00e676" stroke-width="1"/>
-          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">+3.75m Drawbar</text>
-          <text x="0" y="20" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.toolbox)} kg</text>
-        </g>
-      </g>
-
-      <!-- Front Storage / Tunnel Boot (+3.0m) -->
+      <!-- Front Storage (+3.0m) - Combined Front Storage & A-Frame Gear -->
       <g transform="translate(670, 138)" class="pin-node" onclick="focusZone('frontStorage')" style="cursor: pointer;">
         <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#00e676" stroke-width="2.5" filter="url(#neonGlow)"/>
         <text x="0" y="4" fill="#00e676" font-size="9" font-weight="900" text-anchor="middle">FS</text>
         <g transform="translate(0, 18)">
-          <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#00e676" stroke-width="1"/>
-          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">+3.0m Boot</text>
+          <rect x="-44" y="0" width="88" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#00e676" stroke-width="1"/>
+          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">+3.0m Front</text>
           <text x="0" y="20" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.frontStorage)} kg</text>
         </g>
       </g>
 
-      <!-- Front Water Tank (+1.8m) -->
-      <g transform="translate(745, 180)" class="pin-node" onclick="focusZone('frontTank')" style="cursor: pointer;">
-        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" filter="url(#neonGlow)"/>
-        <text x="0" y="4" fill="#38bdf8" font-size="9" font-weight="900" text-anchor="middle">FW</text>
-        <g transform="translate(0, 18)">
-          <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#38bdf8" stroke-width="1"/>
-          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">+1.8m Tank</text>
-          <text x="0" y="20" fill="#38bdf8" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.frontTank)} L</text>
-        </g>
-      </g>
+      <!-- Dynamic Water Tank Pins (FW and/or RW) -->
+      ${waterPinsSvg}
 
       <!-- Mid Internal Storage (0.0m) -->
       <g transform="translate(850, 125)" class="pin-node" onclick="focusZone('midStorage')" style="cursor: pointer;">
@@ -585,17 +715,6 @@ function renderRigBlueprint(p) {
           <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#a855f7" stroke-width="1"/>
           <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">0.0m Axle</text>
           <text x="0" y="20" fill="#f1f5f9" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.midStorage)} kg</text>
-        </g>
-      </g>
-
-      <!-- Rear Water Tank (-1.5m) -->
-      <g transform="translate(950, 180)" class="pin-node" onclick="focusZone('rearTank')" style="cursor: pointer;">
-        <circle cx="0" cy="0" r="13" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5" filter="url(#neonGlow)"/>
-        <text x="0" y="4" fill="#38bdf8" font-size="9" font-weight="900" text-anchor="middle">RW</text>
-        <g transform="translate(0, 18)">
-          <rect x="-40" y="0" width="80" height="24" rx="4" fill="rgba(15, 23, 42, 0.95)" stroke="#38bdf8" stroke-width="1"/>
-          <text x="0" y="10" fill="#94a3b8" font-size="8" font-weight="700" text-anchor="middle">-1.5m Tank</text>
-          <text x="0" y="20" fill="#38bdf8" font-size="10" font-family="Consolas, monospace" font-weight="800" text-anchor="middle">${Math.round(p.zones.rearTank)} L</text>
         </g>
       </g>
 
@@ -615,8 +734,106 @@ function renderRigBlueprint(p) {
 
 // Update Zone Cards & Slider Displays
 function updateStorageCards(p) {
-  const zones = ['toolbox', 'frontStorage', 'frontTank', 'midStorage', 'rearTank', 'rearStorage', 'cabin', 'tub'];
-  
+  const cfg = getCaravanConfig();
+  const hitchDist = p.caravan.hitchDist > 0 ? p.caravan.hitchDist : 5.0;
+
+  // Dynamic Tank 1 (Front / Primary) Display & Labels
+  const cardFrontTank = document.getElementById('card-frontTank');
+  if (cardFrontTank) {
+    if (!cfg.frontTank || !cfg.frontTank.enabled) {
+      cardFrontTank.style.display = 'none';
+    } else {
+      cardFrontTank.style.display = '';
+      const titleEl = document.getElementById('title-frontTank');
+      const tagEl = document.getElementById('tag-frontTank');
+      const subEl = document.getElementById('sub-frontTank');
+      const sliderEl = document.getElementById('slider-frontTank');
+      
+      if (titleEl) {
+        titleEl.textContent = (cfg.tankMode && cfg.tankMode.startsWith('single')) ? 'Caravan Water Tank' : cfg.frontTank.name;
+      }
+      
+      const armVal = cfg.frontTank.leverArm;
+      const armStr = armVal === 0 ? '0.00 m (Axle)' : (armVal > 0 ? `+${armVal.toFixed(2)} m` : `${armVal.toFixed(2)} m`);
+      if (tagEl) {
+        tagEl.textContent = armStr;
+        tagEl.className = 'lever-arm-tag ' + (armVal > 0 ? 'front' : (armVal < 0 ? 'rear' : ''));
+      }
+      
+      const ratio = (armVal / hitchDist).toFixed(2);
+      if (subEl) {
+        subEl.textContent = `${ratio >= 0 ? '+' : ''}${ratio}kg ball / kg`;
+      }
+      
+      if (sliderEl) {
+        sliderEl.min = -cfg.frontTank.capacity;
+        sliderEl.max = 50;
+      }
+
+      const qFront = document.getElementById('quick-group-frontTank');
+      if (qFront) {
+        const cap = cfg.frontTank.capacity;
+        const half = Math.round(cap / 2);
+        qFront.innerHTML = `
+          <button class="tank-btn" type="button" onclick="setQuickTank('frontTank', ${cap})">Full (${cap}L)</button>
+          <button class="tank-btn" type="button" onclick="setQuickTank('frontTank', ${half})">Half (${half}L)</button>
+          <button class="tank-btn" type="button" onclick="setQuickTank('frontTank', 0)">Dry (0L)</button>
+        `;
+      }
+    }
+  }
+
+  // Dynamic Tank 2 (Rear / Secondary) Display & Labels
+  const cardRearTank = document.getElementById('card-rearTank');
+  if (cardRearTank) {
+    if (!cfg.rearTank || !cfg.rearTank.enabled) {
+      cardRearTank.style.display = 'none';
+    } else {
+      cardRearTank.style.display = '';
+      const titleEl = document.getElementById('title-rearTank');
+      const tagEl = document.getElementById('tag-rearTank');
+      const subEl = document.getElementById('sub-rearTank');
+      const sliderEl = document.getElementById('slider-rearTank');
+      
+      if (titleEl) {
+        titleEl.textContent = cfg.rearTank.name;
+      }
+      
+      const armVal = cfg.rearTank.leverArm;
+      const armStr = armVal === 0 ? '0.00 m (Axle)' : (armVal > 0 ? `+${armVal.toFixed(2)} m` : `${armVal.toFixed(2)} m`);
+      if (tagEl) {
+        tagEl.textContent = armStr;
+        tagEl.className = 'lever-arm-tag ' + (armVal > 0 ? 'front' : (armVal < 0 ? 'rear' : ''));
+      }
+      
+      const ratio = (armVal / hitchDist).toFixed(2);
+      if (subEl) {
+        subEl.textContent = `${ratio >= 0 ? '+' : ''}${ratio}kg ball / kg`;
+      }
+      
+      if (sliderEl) {
+        sliderEl.min = -cfg.rearTank.capacity;
+        sliderEl.max = 50;
+      }
+
+      const qRear = document.getElementById('quick-group-rearTank');
+      if (qRear) {
+        const cap = cfg.rearTank.capacity;
+        const half = Math.round(cap / 2);
+        qRear.innerHTML = `
+          <button class="tank-btn" type="button" onclick="setQuickTank('rearTank', ${cap})">Full (${cap}L)</button>
+          <button class="tank-btn" type="button" onclick="setQuickTank('rearTank', ${half})">Half (${half}L)</button>
+          <button class="tank-btn" type="button" onclick="setQuickTank('rearTank', 0)">Dry (0L)</button>
+        `;
+      }
+    }
+  }
+
+  // Water Balancer Presets Bar
+  renderWaterBalancerUI();
+
+  // Update Zone Weights & Sliders
+  const zones = ['frontStorage', 'frontTank', 'midStorage', 'rearTank', 'rearStorage', 'cabin', 'tub'];
   zones.forEach(zoneKey => {
     const totalEl = document.getElementById(`weight-${zoneKey}`);
     const offsetEl = document.getElementById(`offset-${zoneKey}`);
@@ -634,6 +851,60 @@ function updateStorageCards(p) {
       sliderEl.value = offset;
     }
   });
+}
+
+// Render dynamic water balancer preset buttons
+function renderWaterBalancerUI() {
+  const container = document.getElementById('water-balancer-pills');
+  if (!container) return;
+  const cfg = getCaravanConfig();
+
+  if (cfg.frontTank && cfg.frontTank.enabled && cfg.rearTank && cfg.rearTank.enabled) {
+    const totalWater = cfg.frontTank.capacity + cfg.rearTank.capacity;
+    container.innerHTML = `
+      <button class="balancer-pill" type="button" onclick="setWaterPreset('both-full')">
+        <span>💧💧 Both Full</span>
+        <span class="sub">${totalWater}L Total</span>
+      </button>
+      <button class="balancer-pill" type="button" onclick="setWaterPreset('both-dry')">
+        <span>🏜️ Both Empty</span>
+        <span class="sub">Dry Travel (0L)</span>
+      </button>
+      <button class="balancer-pill" type="button" onclick="setWaterPreset('front-full-rear-dry')">
+        <span>🔼 Front Full / Rear Dry</span>
+        <span class="sub">+TBM Ballast</span>
+      </button>
+      <button class="balancer-pill" type="button" onclick="setWaterPreset('front-dry-rear-full')">
+        <span>🔽 Front Dry / Rear Full</span>
+        <span class="sub">-TBM Hitch Relief</span>
+      </button>
+    `;
+  } else if ((cfg.frontTank && cfg.frontTank.enabled) || (cfg.rearTank && cfg.rearTank.enabled)) {
+    const activeZone = (cfg.frontTank && cfg.frontTank.enabled) ? 'frontTank' : 'rearTank';
+    const activeTank = (cfg.frontTank && cfg.frontTank.enabled) ? cfg.frontTank : cfg.rearTank;
+    const cap = activeTank.capacity;
+    const half = Math.round(cap / 2);
+    container.innerHTML = `
+      <button class="balancer-pill" type="button" onclick="setQuickTank('${activeZone}', ${cap})">
+        <span>💧 Tank Full (${cap}L)</span>
+        <span class="sub">100% Water Payload</span>
+      </button>
+      <button class="balancer-pill" type="button" onclick="setQuickTank('${activeZone}', ${half})">
+        <span>💧 Tank Half (${half}L)</span>
+        <span class="sub">50% Water Level</span>
+      </button>
+      <button class="balancer-pill" type="button" onclick="setQuickTank('${activeZone}', 0)">
+        <span>🏜️ Tank Empty (0L)</span>
+        <span class="sub">Dry Travel Weight</span>
+      </button>
+    `;
+  } else {
+    container.innerHTML = `
+      <div style="font-size: 11px; color: var(--text-dim); padding: 4px 8px;">
+        Water tanks disabled. Click <strong>"⚙️ Tank & Axle Setup"</strong> above to enable water tanks.
+      </div>
+    `;
+  }
 }
 
 // Update 7 Telemetry Diagnostics Cards
@@ -687,7 +958,7 @@ function updateSafetyAdvisor(p) {
     alerts.push({
       type: 'fail',
       icon: '⚠️',
-      text: `<strong>SWAY HAZARD (TBM: ${p.tbmPercent.toFixed(1)}%):</strong> Towball download is below the minimum safe 8% threshold. High risk of deadly fishtailing & aerodynamic sway at highway speeds! Shift at least ${Math.round((0.085 * p.trailerATM) - p.tbm)} kg of weight forward toward the tunnel boot or toolbox.`
+      text: `<strong>SWAY HAZARD (TBM: ${p.tbmPercent.toFixed(1)}%):</strong> Towball download is below the minimum safe 8% threshold. High risk of deadly fishtailing & aerodynamic sway at highway speeds! Shift at least ${Math.round((0.085 * p.trailerATM) - p.tbm)} kg of weight forward toward the tunnel boot or A-Frame.`
     });
   } else if (p.tbmPercent >= 8.0 && p.tbmPercent <= 11.5) {
     alerts.push({
@@ -844,8 +1115,7 @@ function getZoneLabel(zone) {
   const map = {
     cabin: 'Vehicle Cabin',
     tub: 'Vehicle Tub',
-    toolbox: 'Toolbox (+3.75m)',
-    frontStorage: 'Tunnel Boot (+3.0m)',
+    frontStorage: 'Front Storage (+3.0m)',
     frontTank: 'Front Tank (+1.8m)',
     midStorage: 'Mid Storage (0.0m)',
     rearTank: 'Rear Tank (-1.5m)',
@@ -872,6 +1142,12 @@ function bindEvents() {
     state.currentCaravanId = e.target.value;
     if (state.currentCaravanId === 'user-defined') {
       openCaravanModal();
+    } else if (state.currentCaravanId === 'single-axle-van') {
+      const cfg = getCaravanConfig();
+      cfg.axleType = 'single';
+    } else if (state.currentCaravanId === 'tandem-van') {
+      const cfg = getCaravanConfig();
+      cfg.axleType = 'tandem';
     }
     playBlip();
     saveState();
@@ -879,7 +1155,7 @@ function bindEvents() {
   });
 
   // Sliders
-  const zones = ['toolbox', 'frontStorage', 'frontTank', 'midStorage', 'rearTank', 'rearStorage', 'cabin', 'tub'];
+  const zones = ['frontStorage', 'frontTank', 'midStorage', 'rearTank', 'rearStorage', 'cabin', 'tub'];
   zones.forEach(zone => {
     const slider = document.getElementById(`slider-${zone}`);
     if (slider) {
@@ -971,9 +1247,12 @@ function bindEvents() {
 
 // Quick Tank Presets
 function setQuickTank(tankZone, liters) {
-  // Front tank base is 95L, rear tank base is 95L
-  const base = 95;
-  const offset = liters - base;
+  const cfg = getCaravanConfig();
+  const cap = (tankZone === 'frontTank') ? 
+    (cfg.frontTank ? cfg.frontTank.capacity : 95) : 
+    (cfg.rearTank ? cfg.rearTank.capacity : 95);
+  
+  const offset = liters - cap;
   state.sliderOffsets[tankZone] = offset;
   playBlip();
   saveState();
@@ -982,18 +1261,22 @@ function setQuickTank(tankZone, liters) {
 
 // Water Balancer Presets
 function setWaterPreset(presetName) {
+  const cfg = getCaravanConfig();
+  const t1Cap = cfg.frontTank ? cfg.frontTank.capacity : 95;
+  const t2Cap = cfg.rearTank ? cfg.rearTank.capacity : 95;
+
   if (presetName === 'both-full') {
-    setQuickTank('frontTank', 95);
-    setQuickTank('rearTank', 95);
+    if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', t1Cap);
+    if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', t2Cap);
   } else if (presetName === 'both-dry') {
-    setQuickTank('frontTank', 0);
-    setQuickTank('rearTank', 0);
+    if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', 0);
+    if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', 0);
   } else if (presetName === 'front-full-rear-dry') {
-    setQuickTank('frontTank', 95);
-    setQuickTank('rearTank', 0);
+    if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', t1Cap);
+    if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', 0);
   } else if (presetName === 'front-dry-rear-full') {
-    setQuickTank('frontTank', 0);
-    setQuickTank('rearTank', 95);
+    if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', 0);
+    if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', t2Cap);
   }
 }
 
@@ -1013,8 +1296,10 @@ function focusZone(zoneKey) {
 function saveState() {
   try {
     localStorage.setItem('towing_hud_state_v1', JSON.stringify({
+      payloadVersion: 3,
       currentVehicleId: state.currentVehicleId,
       currentCaravanId: state.currentCaravanId,
+      caravanConfig: state.caravanConfig,
       sliderOffsets: state.sliderOffsets,
       inventory: state.inventory,
       customVehicle: state.customVehicle,
@@ -1043,8 +1328,7 @@ const DEFAULT_PHOTO_POSITIONS = {
   // Storage pins
   cabin: { x: 230, y: 220 },
   tub: { x: 350, y: 250 },
-  toolbox: { x: 545, y: 275 },
-  frontStorage: { x: 630, y: 220 },
+  frontStorage: { x: 620, y: 230 },
   frontTank: { x: 715, y: 340 },
   midStorage: { x: 815, y: 200 },
   rearTank: { x: 895, y: 340 },
@@ -1359,6 +1643,7 @@ function renderPhotoOverlay(p) {
   const overlay = document.getElementById('photo-data-overlay');
   if (!overlay) return;
   if (!p) p = computePhysics();
+  const cfg = getCaravanConfig();
 
   const pos = getPhotoPositions();
   const isCalibrating = !!state.photoOverlay.calibrating;
@@ -1464,9 +1749,10 @@ function renderPhotoOverlay(p) {
   const raMargin = p.margins.rearAxle !== null ? (p.margins.rearAxle >= 0 ? '+' : '') + Math.round(p.margins.rearAxle) + ' kg' : p.status.rearAxle.toUpperCase();
   html += renderAxleCard(ra.x, ra.y, 'REAR AXLE LOAD', `${Math.round(p.rearAxleLoad).toLocaleString()} kg`, raCol, `Margin: ${raMargin}`, 'rearAxle');
 
-  // 4. Caravan Axles (GTM) Card
+  // 4. Caravan Axles (GTM) Card - Dynamic Single or Tandem Axle title
   const gtmMargin = p.margins.gtm !== null ? (p.margins.gtm >= 0 ? '+' : '') + Math.round(p.margins.gtm) + ' kg' : p.status.gtm.toUpperCase();
-  html += renderAxleCard(ca.x, ca.y, 'CARAVAN TYRES (GTM)', `${Math.round(p.trailerGTM).toLocaleString()} kg`, gtmCol, `Margin: ${gtmMargin}`, 'caravanAxle');
+  const caravanAxleTitle = cfg.axleType === 'single' ? 'CARAVAN SINGLE TYRES (GTM)' : 'CARAVAN TANDEM TYRES (GTM)';
+  html += renderAxleCard(ca.x, ca.y, caravanAxleTitle, `${Math.round(p.trailerGTM).toLocaleString()} kg`, gtmCol, `Margin: ${gtmMargin}`, 'caravanAxle');
 
   // 5. Towball Download (TBM) - Elevated Card & Bold Neon Downforce Arrow
   const tbmCardW = 186;
@@ -1501,12 +1787,25 @@ function renderPhotoOverlay(p) {
     const pins = [
       { id: 'cabin', code: 'CAB', label: 'Cabin Occupants & Gear', kg: Math.round(z.cabin || 0), stroke: '#38bdf8' },
       { id: 'tub', code: 'TUB', label: 'Tub / Tray Cargo', kg: Math.round(z.tub || 0), stroke: '#38bdf8' },
-      { id: 'toolbox', code: 'TB', label: 'Drawbar Toolbox', kg: Math.round(z.toolbox || 0), stroke: '#00e676' },
-      { id: 'frontStorage', code: 'FS', label: 'Tunnel Boot', kg: Math.round(z.frontStorage || 0), stroke: '#00e676' },
-      { id: 'frontTank', code: 'FW', label: 'Front Water Tank', kg: Math.round(z.frontTank || 0), stroke: '#38bdf8', isWater: true },
-      { id: 'midStorage', code: 'MID', label: 'Mid Internal / Pantry', kg: Math.round(z.midStorage || 0), stroke: '#a855f7' },
-      { id: 'rearTank', code: 'RW', label: 'Rear Water Tank', kg: Math.round(z.rearTank || 0), stroke: '#38bdf8', isWater: true },
-      { id: 'rearStorage', code: 'RS', label: 'Rear Bumper / Lockers', kg: Math.round(z.rearStorage || 0), stroke: '#f59e0b' }
+      { id: 'frontStorage', code: 'FS', label: 'Front Storage (+3.0m)', kg: Math.round(z.frontStorage || 0), stroke: '#00e676' },
+      ...(cfg.frontTank && cfg.frontTank.enabled ? [{
+        id: 'frontTank',
+        code: (cfg.tankMode && cfg.tankMode.startsWith('single')) ? 'WT' : 'FW',
+        label: `${(cfg.tankMode && cfg.tankMode.startsWith('single')) ? 'Water Tank' : cfg.frontTank.name} (${cfg.frontTank.leverArm >= 0 ? '+' : ''}${cfg.frontTank.leverArm.toFixed(2)}m)`,
+        kg: Math.round(z.frontTank || 0),
+        stroke: '#38bdf8',
+        isWater: true
+      }] : []),
+      { id: 'midStorage', code: 'MID', label: 'Mid Internal / Pantry (0.0m)', kg: Math.round(z.midStorage || 0), stroke: '#a855f7' },
+      ...(cfg.rearTank && cfg.rearTank.enabled ? [{
+        id: 'rearTank',
+        code: 'RW',
+        label: `${cfg.rearTank.name} (${cfg.rearTank.leverArm >= 0 ? '+' : ''}${cfg.rearTank.leverArm.toFixed(2)}m)`,
+        kg: Math.round(z.rearTank || 0),
+        stroke: '#38bdf8',
+        isWater: true
+      }] : []),
+      { id: 'rearStorage', code: 'RS', label: 'Rear Bumper / Lockers (-2.25m)', kg: Math.round(z.rearStorage || 0), stroke: '#f59e0b' }
     ];
 
     pins.forEach(pin => {
@@ -1646,6 +1945,205 @@ function saveCaravanModal() {
   state.currentCaravanId = 'user-defined';
   populateSelectors();
   closeModal('caravan-modal');
+  saveState();
+  updateTelemetry();
+}
+
+// ================= CARAVAN AXLES & WATER TANKS ARCHITECTURE CONTROLLER =================
+
+let activeModalAxleType = 'tandem';
+
+function openTankAxleModal() {
+  const cfg = getCaravanConfig();
+  setModalAxleType(cfg.axleType || 'tandem');
+  
+  const presetSel = document.getElementById('modal-tank-preset');
+  if (presetSel) presetSel.value = cfg.tankMode || 'dual';
+  
+  const t1Enable = document.getElementById('modal-tank1-enable');
+  const t1Cap = document.getElementById('modal-tank1-cap');
+  const t1Arm = document.getElementById('modal-tank1-arm');
+  if (t1Enable) t1Enable.checked = !!(cfg.frontTank && cfg.frontTank.enabled);
+  if (t1Cap) t1Cap.value = cfg.frontTank ? cfg.frontTank.capacity : 95;
+  if (t1Arm) t1Arm.value = cfg.frontTank ? cfg.frontTank.leverArm : 1.80;
+
+  const t2Enable = document.getElementById('modal-tank2-enable');
+  const t2Cap = document.getElementById('modal-tank2-cap');
+  const t2Arm = document.getElementById('modal-tank2-arm');
+  if (t2Enable) t2Enable.checked = !!(cfg.rearTank && cfg.rearTank.enabled);
+  if (t2Cap) t2Cap.value = cfg.rearTank ? cfg.rearTank.capacity : 95;
+  if (t2Arm) t2Arm.value = cfg.rearTank ? cfg.rearTank.leverArm : -1.50;
+
+  toggleModalTankFields();
+  updateTankModalSummary();
+  document.getElementById('tank-axle-modal').classList.add('active');
+}
+
+function setModalAxleType(type) {
+  activeModalAxleType = type;
+  const btnTandem = document.getElementById('opt-axle-tandem');
+  const btnSingle = document.getElementById('opt-axle-single');
+  if (btnTandem) btnTandem.classList.toggle('active', type === 'tandem');
+  if (btnSingle) btnSingle.classList.toggle('active', type === 'single');
+  updateTankModalSummary();
+}
+
+function onModalTankPresetChange() {
+  const sel = document.getElementById('modal-tank-preset');
+  if (!sel) return;
+  const preset = sel.value;
+
+  const t1Enable = document.getElementById('modal-tank1-enable');
+  const t1Cap = document.getElementById('modal-tank1-cap');
+  const t1Arm = document.getElementById('modal-tank1-arm');
+  const t2Enable = document.getElementById('modal-tank2-enable');
+  const t2Cap = document.getElementById('modal-tank2-cap');
+  const t2Arm = document.getElementById('modal-tank2-arm');
+
+  if (preset === 'dual') {
+    if (t1Enable) t1Enable.checked = true;
+    if (t1Cap) t1Cap.value = 95;
+    if (t1Arm) t1Arm.value = 1.80;
+    if (t2Enable) t2Enable.checked = true;
+    if (t2Cap) t2Cap.value = 95;
+    if (t2Arm) t2Arm.value = -1.50;
+  } else if (preset === 'single-front') {
+    if (t1Enable) t1Enable.checked = true;
+    if (t1Cap) t1Cap.value = 95;
+    if (t1Arm) t1Arm.value = 1.50;
+    if (t2Enable) t2Enable.checked = false;
+  } else if (preset === 'single-center') {
+    if (t1Enable) t1Enable.checked = true;
+    if (t1Cap) t1Cap.value = 95;
+    if (t1Arm) t1Arm.value = 0.00;
+    if (t2Enable) t2Enable.checked = false;
+  } else if (preset === 'single-rear') {
+    if (t1Enable) t1Enable.checked = true;
+    if (t1Cap) t1Cap.value = 95;
+    if (t1Arm) t1Arm.value = -1.50;
+    if (t2Enable) t2Enable.checked = false;
+  }
+  
+  toggleModalTankFields();
+  updateTankModalSummary();
+}
+
+function toggleModalTankFields() {
+  const t1Enable = document.getElementById('modal-tank1-enable');
+  const t1Box = document.getElementById('tank1-config-box');
+  const t1Cap = document.getElementById('modal-tank1-cap');
+  const t1Arm = document.getElementById('modal-tank1-arm');
+
+  const t2Enable = document.getElementById('modal-tank2-enable');
+  const t2Box = document.getElementById('tank2-config-box');
+  const t2Cap = document.getElementById('modal-tank2-cap');
+  const t2Arm = document.getElementById('modal-tank2-arm');
+
+  const e1 = t1Enable ? t1Enable.checked : false;
+  const e2 = t2Enable ? t2Enable.checked : false;
+
+  if (t1Box) t1Box.style.opacity = e1 ? '1' : '0.45';
+  if (t1Cap) t1Cap.disabled = !e1;
+  if (t1Arm) t1Arm.disabled = !e1;
+
+  if (t2Box) t2Box.style.opacity = e2 ? '1' : '0.45';
+  if (t2Cap) t2Cap.disabled = !e2;
+  if (t2Arm) t2Arm.disabled = !e2;
+
+  updateTankModalSummary();
+}
+
+function updateTankModalSummary() {
+  const summaryEl = document.getElementById('tank-impact-summary');
+  if (!summaryEl) return;
+
+  const caravan = getActiveCaravan();
+  const hitchDist = caravan.hitchDist > 0 ? caravan.hitchDist : 5.0;
+
+  const t1Enable = document.getElementById('modal-tank1-enable')?.checked;
+  const t1Cap = parseFloat(document.getElementById('modal-tank1-cap')?.value) || 0;
+  const t1Arm = parseFloat(document.getElementById('modal-tank1-arm')?.value) || 0;
+
+  const t2Enable = document.getElementById('modal-tank2-enable')?.checked;
+  const t2Cap = parseFloat(document.getElementById('modal-tank2-cap')?.value) || 0;
+  const t2Arm = parseFloat(document.getElementById('modal-tank2-arm')?.value) || 0;
+
+  const t1Impact = t1Enable ? (t1Cap * t1Arm / hitchDist) : 0;
+  const t2Impact = t2Enable ? (t2Cap * t2Arm / hitchDist) : 0;
+  const totalImpact = t1Impact + t2Impact;
+  const totalWater = (t1Enable ? t1Cap : 0) + (t2Enable ? t2Cap : 0);
+
+  const axleDesc = activeModalAxleType === 'single' ? 
+    '🚜 <strong>Single Axle:</strong> Central fulcrum under caravan frame. Moments translate directly to hitch & tyre.' :
+    '🚛 <strong>Tandem Dual Axles:</strong> Load equalized across 4 tyres pivoting around central axle fulcrum (0.0m).';
+
+  let t1Text = '';
+  if (t1Enable) {
+    if (Math.abs(t1Arm) < 0.05) {
+      t1Text = `<div>• <strong>Tank 1 (${t1Cap}L at 0.00m):</strong> Centered over axle fulcrum = <strong>0.0 kg hitch impact</strong> (neutral ballast at all fill levels).</div>`;
+    } else {
+      t1Text = `<div>• <strong>Tank 1 (${t1Cap}L at ${t1Arm > 0 ? '+' : ''}${t1Arm.toFixed(2)}m):</strong> Full tank exerts <strong>${t1Impact >= 0 ? '+' : ''}${t1Impact.toFixed(1)} kg</strong> on towball.</div>`;
+    }
+  } else {
+    t1Text = `<div>• <strong>Tank 1:</strong> Disabled.</div>`;
+  }
+
+  let t2Text = '';
+  if (t2Enable) {
+    if (Math.abs(t2Arm) < 0.05) {
+      t2Text = `<div>• <strong>Tank 2 (${t2Cap}L at 0.00m):</strong> Centered over axle fulcrum = <strong>0.0 kg hitch impact</strong>.</div>`;
+    } else {
+      t2Text = `<div>• <strong>Tank 2 (${t2Cap}L at ${t2Arm > 0 ? '+' : ''}${t2Arm.toFixed(2)}m):</strong> Full tank exerts <strong>${t2Impact >= 0 ? '+' : ''}${t2Impact.toFixed(1)} kg</strong> on towball.</div>`;
+    }
+  } else {
+    t2Text = `<div>• <strong>Tank 2:</strong> Disabled.</div>`;
+  }
+
+  const netText = `<div>• <strong>Combined Water Capacity:</strong> ${totalWater} L. When full, net towball download change is <strong>${totalImpact >= 0 ? '+' : ''}${totalImpact.toFixed(1)} kg</strong>.</div>`;
+
+  summaryEl.innerHTML = `
+    <div style="font-weight: 700; color: var(--accent-cyan); margin-bottom: 6px;">Physics & Moment Balance Summary (Hitch Distance: ${hitchDist}m)</div>
+    <div style="margin-bottom: 4px;">${axleDesc}</div>
+    ${t1Text}
+    ${t2Text}
+    <div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.1);">${netText}</div>
+  `;
+}
+
+function saveTankAxleModal() {
+  const cfg = getCaravanConfig();
+  
+  cfg.axleType = activeModalAxleType;
+  cfg.tankMode = document.getElementById('modal-tank-preset')?.value || 'custom';
+
+  const t1Enable = document.getElementById('modal-tank1-enable')?.checked ?? true;
+  const t1Cap = parseFloat(document.getElementById('modal-tank1-cap')?.value) || 95;
+  const t1Arm = parseFloat(document.getElementById('modal-tank1-arm')?.value) || 0;
+
+  const t2Enable = document.getElementById('modal-tank2-enable')?.checked ?? false;
+  const t2Cap = parseFloat(document.getElementById('modal-tank2-cap')?.value) || 95;
+  const t2Arm = parseFloat(document.getElementById('modal-tank2-arm')?.value) || 0;
+
+  cfg.frontTank = {
+    enabled: t1Enable,
+    name: (cfg.tankMode && cfg.tankMode.startsWith('single')) ? 'Caravan Water Tank' : 'Front Water Tank',
+    capacity: t1Cap,
+    leverArm: t1Arm
+  };
+
+  cfg.rearTank = {
+    enabled: t2Enable,
+    name: 'Rear Water Tank',
+    capacity: t2Cap,
+    leverArm: t2Arm
+  };
+
+  state.caravanConfig = cfg;
+  LEVER_ARMS.frontTank = cfg.frontTank.leverArm;
+  LEVER_ARMS.rearTank = cfg.rearTank.leverArm;
+
+  closeModal('tank-axle-modal');
+  playChime();
   saveState();
   updateTelemetry();
 }

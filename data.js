@@ -64,7 +64,7 @@
                          "gcm":  6400,
                          "maxTbm":  350,
                          "wheelbase":  3.27,
-                         "overhang":  1.36,
+                         "overhang":  1.31,
                          "rearAxleTare":  1044,
                          "frontAxleTare":  1301,
                          "maxRearAxle":  1959,
@@ -700,7 +700,7 @@
                           "itemWeight":  8,
                           "travelWeight":  8,
                           "category":  "Toolbox Left",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -708,7 +708,7 @@
                           "itemWeight":  4.2,
                           "travelWeight":  4.2,
                           "category":  "Toolbox Left",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -716,7 +716,7 @@
                           "itemWeight":  2.5,
                           "travelWeight":  2.5,
                           "category":  "Toolbox Left",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -724,7 +724,7 @@
                           "itemWeight":  3.6,
                           "travelWeight":  3.6,
                           "category":  "Toolbox Left",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -732,7 +732,7 @@
                           "itemWeight":  3,
                           "travelWeight":  3,
                           "category":  "Toolbox Left",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -740,7 +740,7 @@
                           "itemWeight":  2,
                           "travelWeight":  2,
                           "category":  "Toolbox Left",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -748,7 +748,7 @@
                           "itemWeight":  8.5,
                           "travelWeight":  8.5,
                           "category":  "Toolbox Left",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -756,7 +756,7 @@
                           "itemWeight":  8.5,
                           "travelWeight":  8.5,
                           "category":  "Toolbox Left",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -764,7 +764,7 @@
                           "itemWeight":  1,
                           "travelWeight":  1,
                           "category":  "Toolbox Right",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -772,7 +772,7 @@
                           "itemWeight":  4.4,
                           "travelWeight":  4.4,
                           "category":  "Toolbox Right",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -780,7 +780,7 @@
                           "itemWeight":  5,
                           "travelWeight":  5,
                           "category":  "Toolbox Right",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -788,7 +788,7 @@
                           "itemWeight":  2,
                           "travelWeight":  2,
                           "category":  "Toolbox Right",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -796,7 +796,7 @@
                           "itemWeight":  5.8,
                           "travelWeight":  5.8,
                           "category":  "Toolbox Right",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -804,7 +804,7 @@
                           "itemWeight":  6.2,
                           "travelWeight":  6.2,
                           "category":  "Toolbox Right",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -812,7 +812,7 @@
                           "itemWeight":  2,
                           "travelWeight":  2,
                           "category":  "Toolbox Right",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
                           "packed":  true
                       },
                       {
@@ -820,7 +820,15 @@
                           "itemWeight":  8.6,
                           "travelWeight":  8.6,
                           "category":  "Toolbox Right",
-                          "zone":  "toolbox",
+                          "zone":  "frontStorage",
+                          "packed":  true
+                      },
+                      {
+                          "name":  "Pantry Provisions \u0026 Mid Supplies",
+                          "itemWeight":  33.8,
+                          "travelWeight":  33.8,
+                          "category":  "Dining \u0026 Pantry",
+                          "zone":  "midStorage",
                           "packed":  true
                       }
                   ]
