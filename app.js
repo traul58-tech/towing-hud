@@ -484,7 +484,7 @@ function renderRigBlueprint(p) {
       <circle cx="885" cy="222" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
     `;
     fulcrumLabel = 'TANDEM AXLE FULCRUM (0.0m)';
-    gtmCardTitle = 'CARAVAN TANDEM TYRES (GTM)';
+    gtmCardTitle = 'TANDEM CARAVAN (GTM)';
   }
 
   // Dynamic Water Tank Pins
