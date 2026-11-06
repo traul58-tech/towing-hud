@@ -2260,14 +2260,20 @@ body.car-cockpit-active .hud-app-container {
   display: none;
   position: fixed;
   inset: 0;
+  width: 100%;
+  max-width: 100vw;
+  height: 100dvh;
   z-index: 9500;
   background: var(--bg-primary);
   color: var(--text-main);
-  padding: clamp(8px, 1.5vh, 16px) clamp(10px, 1.8vw, 22px);
-  grid-template-rows: auto 1fr auto;
-  gap: clamp(8px, 1.4vh, 14px);
-  overflow: hidden;
+  padding: clamp(6px, 1.2vh, 14px) clamp(8px, 1.6vw, 20px);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(6px, 1.2vh, 14px);
+  overflow-x: hidden;
+  overflow-y: auto;
   user-select: none;
+  box-sizing: border-box;
 }
 
 body.car-cockpit-active .car-cockpit-overlay {
@@ -2279,37 +2285,42 @@ body.car-cockpit-active .car-cockpit-overlay {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-glow);
   border-radius: var(--radius-md);
-  padding: clamp(6px, 1vh, 12px) clamp(12px, 1.5vw, 18px);
+  padding: clamp(6px, 1vh, 12px) clamp(10px, 1.4vw, 18px);
   box-shadow: var(--shadow-hud);
 }
 
 .car-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex: 1 1 0%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .car-logo-pill {
+  flex-shrink: 0;
   background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
   color: #080c14;
   font-weight: 900;
-  font-size: clamp(11px, 1.3vw, 14px);
-  padding: 5px 10px;
+  font-size: clamp(10px, 1.2vw, 13px);
+  padding: 4px 8px;
   border-radius: 6px;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   white-space: nowrap;
 }
 
 .car-rig-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: clamp(13px, 1.6vw, 18px);
+  display: block;
+  flex: 1 1 0%;
+  min-width: 0;
+  font-size: clamp(12px, 1.5vw, 17px);
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -2355,19 +2366,21 @@ body.car-cockpit-active .car-cockpit-overlay {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .car-action-btn {
-  min-height: 40px;
-  padding: 6px 14px;
+  min-height: 38px;
+  padding: 6px 12px;
   border-radius: 8px;
   border: 1px solid var(--border-subtle);
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
-  font-size: clamp(12px, 1.3vw, 14px);
-  font-weight: 700;
+  font-size: clamp(11px, 1.3vw, 14px);
+  font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 body.daylight-mode .car-action-btn {
@@ -2375,7 +2388,8 @@ body.daylight-mode .car-action-btn {
 }
 
 .car-action-btn.exit {
-  border-color: rgba(255, 23, 68, 0.5);
+  background: rgba(255, 23, 68, 0.18);
+  border: 1.5px solid #ff5252;
   color: #ff5252;
 }
 
@@ -2558,13 +2572,75 @@ body.daylight-mode .car-dock-btn {
   color: #080c14;
 }
 
-@media (max-width: 720px) {
+@media (orientation: portrait), (max-width: 720px) {
   .car-topbar {
     flex-wrap: wrap;
+    padding: 8px 10px;
+    gap: 6px;
   }
+
+  .car-brand {
+    order: 1;
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: calc(100% - 135px);
+  }
+
+  .car-top-actions {
+    order: 2;
+    flex-shrink: 0;
+    margin-left: auto;
+    gap: 6px;
+  }
+
+  .car-action-btn {
+    min-height: 34px;
+    padding: 5px 10px;
+    font-size: 11.5px;
+  }
+
+  .car-master-status {
+    order: 3;
+    width: 100%;
+    text-align: center;
+    padding: 4px 10px;
+    font-size: 11.5px;
+  }
+
+  /* Automatically switch from 3x2 (Landscape) to 2x3 (Portrait) so all 6 gauges stay large and readable */
+  .car-gauges-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .car-big-num {
+    font-size: clamp(20px, 5.2vw, 30px);
+  }
+
+  .car-tile-title {
+    font-size: clamp(10px, 2.6vw, 13px);
+  }
+
+  .car-tile-foot {
+    font-size: clamp(10px, 2.4vw, 12.5px);
+  }
+
   .car-bottom-dock {
     flex-direction: column;
     align-items: stretch;
-    gap: 6px;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .car-dock-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .car-dock-btn {
+    min-height: 38px;
+    font-size: 11.5px;
   }
 }

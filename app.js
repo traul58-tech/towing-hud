@@ -2575,6 +2575,13 @@ function toggleCarCockpitMode(forceState) {
     state.carCockpitMode = !state.carCockpitMode;
   }
   applyCarCockpitDOMState();
+  try {
+    if (state.carCockpitMode && window.location.hash !== '#aa') {
+      history.pushState({ carMode: true }, '', '#aa');
+    } else if (!state.carCockpitMode && window.location.hash === '#aa') {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  } catch (_) {}
   playChime();
   saveState();
   updateTelemetry();
@@ -2587,7 +2594,20 @@ function applyCarCockpitDOMState() {
   if (overlay) {
     overlay.setAttribute('aria-hidden', isCar ? 'false' : 'true');
   }
+  if (window.AndroidAutoBridge && typeof window.AndroidAutoBridge.onCarModeChanged === 'function') {
+    try {
+      window.AndroidAutoBridge.onCarModeChanged(isCar);
+    } catch (_) {}
+  }
 }
+
+window.addEventListener('popstate', () => {
+  if (state.carCockpitMode && window.location.hash !== '#aa') {
+    state.carCockpitMode = false;
+    applyCarCockpitDOMState();
+    saveState();
+  }
+});
 
 function toggleDaylightFromCar() {
   state.daylightMode = !state.daylightMode;
