@@ -455,7 +455,7 @@ function renderRigBlueprint(p) {
       <circle cx="850" cy="222" r="15" fill="#1e293b" stroke="#38bdf8" stroke-width="2.2"/>
     `;
     fulcrumLabel = 'SINGLE AXLE FULCRUM (0.0m)';
-    gtmCardTitle = 'CARAVAN SINGLE TYRES (GTM)';
+    gtmCardTitle = 'SINGLE AXLE CARAVAN (GTM)';
   } else {
     // Tandem Dual Axles at X=815 and X=885, cutout from 775 to 925
     vanBodyPath = `
@@ -1762,7 +1762,7 @@ function renderPhotoOverlay(p) {
 
   // 4. Caravan Axles (GTM) Card - Dynamic Single or Tandem Axle title
   const gtmMargin = p.margins.gtm !== null ? (p.margins.gtm >= 0 ? '+' : '') + Math.round(p.margins.gtm) + ' kg' : p.status.gtm.toUpperCase();
-  const caravanAxleTitle = cfg.axleType === 'single' ? 'CARAVAN SINGLE TYRES (GTM)' : 'CARAVAN TANDEM TYRES (GTM)';
+  const caravanAxleTitle = cfg.axleType === 'single' ? 'SINGLE AXLE CARAVAN (GTM)' : 'TANDEM CARAVAN (GTM)';
   html += renderAxleCard(ca.x, ca.y, caravanAxleTitle, `${Math.round(p.trailerGTM).toLocaleString()} kg`, gtmCol, `Margin: ${gtmMargin}`, 'caravanAxle');
 
   // 5. Towball Download (TBM) - Elevated Card & Bold Neon Downforce Arrow
