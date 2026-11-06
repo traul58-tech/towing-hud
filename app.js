@@ -129,10 +129,20 @@ function initApp() {
         state.daylightMode = parsed.daylightMode;
         document.body.classList.toggle('daylight-mode', state.daylightMode);
       }
+      if (parsed.carCockpitMode) {
+        state.carCockpitMode = parsed.carCockpitMode;
+      }
     }
   } catch (e) {
     console.warn('Could not load saved state', e);
   }
+
+  // Auto-enable Car Display Mode if launched with ?mode=car or #aa (e.g. from Android Auto Browser)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('mode') === 'car' || window.location.hash === '#aa') {
+    state.carCockpitMode = true;
+  }
+  applyCarCockpitDOMState();
 
   populateSelectors();
   renderInventoryTable();
@@ -362,6 +372,10 @@ function updateTelemetry() {
 
   // Update Safety Advisor
   updateSafetyAdvisor(p);
+
+  // Update Widescreen Car Head-Unit Cockpit & Native Android Auto Bridge
+  updateCarCockpitUI(p);
+  pushToAndroidAutoBridge(p);
 }
 
 // Update Arc SVG Gauge fill & percentage
@@ -1315,6 +1329,7 @@ function saveState() {
       customVehicle: state.customVehicle,
       customCaravan: state.customCaravan,
       daylightMode: state.daylightMode,
+      carCockpitMode: !!state.carCockpitMode,
       rigViewMode: state.rigViewMode,
       rigPhotoUrl: state.rigPhotoUrl,
       photoOverlay: {
@@ -1346,6 +1361,120 @@ const DEFAULT_PHOTO_POSITIONS = {
   rearStorage: { x: 955, y: 230 }
 };
 
+// ================= RIG VECTOR VIEW ZOOM & PAN ENGINE =================
+const rigZoom = {
+  scale: 1.0,
+  panX: 0,
+  panY: 0,
+  min: 0.8,
+  max: 3.5,
+  isPanning: false,
+  startX: 0,
+  startY: 0,
+  hasMoved: false,
+  downTime: 0,
+  lastTapTime: 0,
+  lastTapPos: { x: 0, y: 0 }
+};
+
+function getActiveRigStage() {
+  return state.rigViewMode === 'photo'
+    ? document.getElementById('rig-photo-stage')
+    : document.getElementById('rig-blueprint-stage');
+}
+
+function clampPan() {
+  const container = document.getElementById('blueprint-canvas-wrap');
+  if (!container) return;
+  const rect = container.getBoundingClientRect();
+  const w = rect.width || 800;
+  const h = rect.height || 350;
+  
+  if (rigZoom.scale <= 1.0) {
+    rigZoom.panX = 0;
+    rigZoom.panY = 0;
+    return;
+  }
+  
+  const maxPanX = Math.max(0, (w * (rigZoom.scale - 1)) / 2 + 100);
+  const maxPanY = Math.max(0, (h * (rigZoom.scale - 1)) / 2 + 80);
+  rigZoom.panX = Math.max(-maxPanX, Math.min(maxPanX, rigZoom.panX));
+  rigZoom.panY = Math.max(-maxPanY, Math.min(maxPanY, rigZoom.panY));
+}
+
+function applyRigZoom() {
+  const isPhoto = state.rigViewMode === 'photo';
+  const bpStage = document.getElementById('rig-blueprint-stage');
+  const photoStage = document.getElementById('rig-photo-stage');
+  const target = isPhoto ? photoStage : bpStage;
+
+  clampPan();
+
+  if (target) {
+    target.style.transformOrigin = 'center center';
+    target.style.transform = `translate(${Math.round(rigZoom.panX)}px, ${Math.round(rigZoom.panY)}px) scale(${rigZoom.scale.toFixed(2)})`;
+    target.style.transition = (rigZoom.isPanning || activeDragId) ? 'none' : 'transform 0.12s ease-out';
+  }
+
+  const pctText = `${Math.round(rigZoom.scale * 100)}%`;
+  const label1 = document.getElementById('rig-zoom-label');
+  const label2 = document.getElementById('floating-zoom-label');
+  if (label1) label1.textContent = pctText;
+  if (label2) label2.textContent = pctText;
+
+  const badge = document.getElementById('rig-zoom-badge');
+  const badgeText = document.getElementById('rig-zoom-badge-text');
+  if (badge && badgeText) {
+    if (rigZoom.scale > 1.02) {
+      badge.style.display = 'flex';
+      const hint = (isPhoto && state.photoOverlay && state.photoOverlay.calibrating)
+        ? `🔍 ${pctText} • Drag pin to relocate | Drag empty space to pan`
+        : `🔍 ${pctText} • Drag canvas to pan`;
+      badgeText.textContent = hint;
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+function changeRigZoom(delta, focusPoint = null) {
+  const oldScale = rigZoom.scale;
+  let newScale = Math.round((oldScale + delta) * 100) / 100;
+  newScale = Math.max(rigZoom.min, Math.min(rigZoom.max, newScale));
+  if (newScale === oldScale) return;
+
+  if (focusPoint && oldScale > 0) {
+    const factor = newScale / oldScale;
+    rigZoom.panX = focusPoint.x - (focusPoint.x - rigZoom.panX) * factor;
+    rigZoom.panY = focusPoint.y - (focusPoint.y - rigZoom.panY) * factor;
+  } else if (newScale <= 1.0) {
+    rigZoom.panX = 0;
+    rigZoom.panY = 0;
+  }
+
+  rigZoom.scale = newScale;
+  applyRigZoom();
+  playBlip();
+}
+
+function setRigZoomLevel(level) {
+  rigZoom.scale = Math.max(rigZoom.min, Math.min(rigZoom.max, level));
+  if (rigZoom.scale <= 1.0) {
+    rigZoom.panX = 0;
+    rigZoom.panY = 0;
+  }
+  applyRigZoom();
+  playBlip();
+}
+
+function resetRigZoom() {
+  rigZoom.scale = 1.0;
+  rigZoom.panX = 0;
+  rigZoom.panY = 0;
+  applyRigZoom();
+  playBlip();
+}
+
 function getPhotoPositions() {
   if (!state.photoPositions) {
     state.photoPositions = JSON.parse(JSON.stringify(DEFAULT_PHOTO_POSITIONS));
@@ -1372,10 +1501,12 @@ function initRigView() {
   }
   setupOverlayDragging();
   updateRigViewDisplay();
+  applyRigZoom();
 }
 
 function setRigViewMode(mode) {
   state.rigViewMode = mode;
+  resetRigZoom();
   updateRigViewDisplay();
   playBlip();
   saveState();
@@ -1383,6 +1514,7 @@ function setRigViewMode(mode) {
 
 function updateRigViewDisplay() {
   const svgEl = document.getElementById('rig-blueprint-svg');
+  const bpStage = document.getElementById('rig-blueprint-stage');
   const photoContainer = document.getElementById('rig-photo-container');
   const stage = document.getElementById('rig-photo-stage');
   const imgEl = document.getElementById('rig-photo-img');
@@ -1407,6 +1539,7 @@ function updateRigViewDisplay() {
   if (dimsBtn) dimsBtn.classList.toggle('active', !!state.photoOverlay.showDimensions);
 
   if (state.rigViewMode === 'photo') {
+    if (bpStage) bpStage.style.display = 'none';
     if (svgEl) svgEl.style.display = 'none';
     if (photoContainer) photoContainer.style.display = 'flex';
 
@@ -1428,10 +1561,13 @@ function updateRigViewDisplay() {
       if (removeBtn) removeBtn.style.display = 'none';
     }
   } else {
+    if (bpStage) bpStage.style.display = 'flex';
     if (svgEl) svgEl.style.display = 'block';
     if (photoContainer) photoContainer.style.display = 'none';
     if (removeBtn) removeBtn.style.display = state.rigPhotoUrl ? 'inline-flex' : 'none';
   }
+
+  applyRigZoom();
 }
 function handleRigPhotoUpload(e) {
   const file = e.target.files && e.target.files[0];
@@ -1526,10 +1662,12 @@ let activeDragId = null;
 
 function setupOverlayDragging() {
   const overlay = document.getElementById('photo-data-overlay');
-  if (!overlay || overlay._dragInitialized) return;
-  overlay._dragInitialized = true;
+  const canvasWrap = document.getElementById('blueprint-canvas-wrap');
+  if (!canvasWrap || canvasWrap._interactionsSetup) return;
+  canvasWrap._interactionsSetup = true;
 
   function getSvgPoint(e) {
+    if (!overlay) return { x: 500, y: 250 };
     const rect = overlay.getBoundingClientRect();
     if (!rect.width || !rect.height) return { x: 500, y: 250 };
     const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
@@ -1539,50 +1677,135 @@ function setupOverlayDragging() {
     return { x, y };
   }
 
-  overlay.addEventListener('pointerdown', (e) => {
-    if (!state.photoOverlay.calibrating) {
-      // If not in calibration mode, clicking a storage pin focuses that compartment's slider card
-      const target = e.target.closest('[data-drag-id]');
-      if (target) {
-        const id = target.getAttribute('data-drag-id');
-        if (id && id !== 'frontAxle' && id !== 'rearAxle' && id !== 'tbm' && id !== 'caravanAxle') {
-          onOverlayPinClick(id);
-        }
+  // Pointer Down on canvas wrap
+  canvasWrap.addEventListener('pointerdown', (e) => {
+    // If click was on a floating HUD button, let the button handle it
+    if (e.target.closest('.rig-floating-zoom-pill, .rig-zoom-toolbar, .cal-banner-actions')) return;
+
+    rigZoom.downTime = Date.now();
+    rigZoom.hasMoved = false;
+    rigZoom.startX = e.clientX - rigZoom.panX;
+    rigZoom.startY = e.clientY - rigZoom.panY;
+
+    const isPhoto = state.rigViewMode === 'photo';
+    const isCalibrating = !!(state.photoOverlay && state.photoOverlay.calibrating);
+
+    if (isPhoto && isCalibrating && overlay) {
+      const pinTarget = e.target.closest('[data-drag-id]');
+      if (pinTarget) {
+        activeDragId = pinTarget.getAttribute('data-drag-id');
+        try { overlay.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+        return;
+      }
+    }
+
+    // Canvas panning when zoomed in or when in calibration/blueprint mode
+    if (rigZoom.scale > 1.01 || (isPhoto && isCalibrating)) {
+      rigZoom.isPanning = true;
+      try { canvasWrap.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+  });
+
+  // Pointer Move on window
+  window.addEventListener('pointermove', (e) => {
+    if (activeDragId && state.photoOverlay && state.photoOverlay.calibrating) {
+      const pt = getSvgPoint(e);
+      const pos = getPhotoPositions();
+      if (pos[activeDragId]) {
+        pos[activeDragId].x = pt.x;
+        pos[activeDragId].y = pt.y;
+        renderPhotoOverlay(computePhysics());
       }
       return;
     }
-    const target = e.target.closest('[data-drag-id]');
-    if (!target) return;
-    activeDragId = target.getAttribute('data-drag-id');
-    try { overlay.setPointerCapture(e.pointerId); } catch (_) {}
-    e.preventDefault();
-  });
 
-  window.addEventListener('pointermove', (e) => {
-    if (!activeDragId || !state.photoOverlay.calibrating) return;
-    const pt = getSvgPoint(e);
-    const pos = getPhotoPositions();
-    if (pos[activeDragId]) {
-      pos[activeDragId].x = pt.x;
-      pos[activeDragId].y = pt.y;
-      renderPhotoOverlay(computePhysics());
+    if (rigZoom.isPanning) {
+      const newPanX = e.clientX - rigZoom.startX;
+      const newPanY = e.clientY - rigZoom.startY;
+      if (Math.abs(newPanX - rigZoom.panX) > 3 || Math.abs(newPanY - rigZoom.panY) > 3) {
+        rigZoom.hasMoved = true;
+      }
+      rigZoom.panX = newPanX;
+      rigZoom.panY = newPanY;
+      applyRigZoom();
     }
   });
 
-  function stopDrag(e) {
+  // Pointer Up / Cancel on window
+  function stopInteraction(e) {
     if (activeDragId) {
       activeDragId = null;
       saveState();
-      try { overlay.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (overlay) {
+        try { overlay.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+    }
+
+    if (rigZoom.isPanning) {
+      rigZoom.isPanning = false;
+      try { canvasWrap.releasePointerCapture(e.pointerId); } catch (_) {}
+      applyRigZoom();
+    }
+
+    // Double-tap detector
+    const now = Date.now();
+    const tapDist = Math.hypot(e.clientX - rigZoom.lastTapPos.x, e.clientY - rigZoom.lastTapPos.y);
+    if (now - rigZoom.lastTapTime < 320 && tapDist < 25 && !rigZoom.hasMoved) {
+      if (rigZoom.scale <= 1.05) {
+        setRigZoomLevel(2.0);
+      } else {
+        resetRigZoom();
+      }
+      rigZoom.lastTapTime = 0;
+    } else {
+      rigZoom.lastTapTime = now;
+      rigZoom.lastTapPos = { x: e.clientX, y: e.clientY };
     }
   }
 
-  window.addEventListener('pointerup', stopDrag);
-  window.addEventListener('pointercancel', stopDrag);
+  window.addEventListener('pointerup', stopInteraction);
+  window.addEventListener('pointercancel', stopInteraction);
+
+  // Wheel zoom on canvas
+  canvasWrap.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.2 : -0.2;
+    changeRigZoom(delta);
+  }, { passive: false });
+
+  // Touch Pinch-to-zoom
+  let touchStartDist = 0;
+  let touchStartScale = 1.0;
+
+  canvasWrap.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      touchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchStartScale = rigZoom.scale;
+    }
+  }, { passive: true });
+
+  canvasWrap.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && touchStartDist > 0) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const ratio = dist / touchStartDist;
+      let newScale = Math.round(touchStartScale * ratio * 100) / 100;
+      newScale = Math.max(rigZoom.min, Math.min(rigZoom.max, newScale));
+      rigZoom.scale = newScale;
+      applyRigZoom();
+      e.preventDefault();
+    }
+  }, { passive: false });
 }
 
 function onOverlayPinClick(id) {
-  if (state.photoOverlay.calibrating) return;
+  if (state.photoOverlay.calibrating || rigZoom.hasMoved) return;
   focusZone(id);
   playBlip();
 }
@@ -1598,7 +1821,12 @@ function toggleOverlayCalibration() {
   if (banner) {
     banner.style.display = state.photoOverlay.calibrating ? 'flex' : 'none';
   }
+  // Auto-zoom on mobile when entering calibration mode to make pins larger & easy to grab
+  if (state.photoOverlay.calibrating && rigZoom.scale <= 1.05 && window.innerWidth <= 768) {
+    setRigZoomLevel(1.5);
+  }
   renderPhotoOverlay(computePhysics());
+  applyRigZoom();
   playBlip();
 }
 
@@ -1744,7 +1972,8 @@ function renderPhotoOverlay(p) {
         <!-- Hub Anchor Dot -->
         <circle cx="${x}" cy="${yAnchor}" r="8" fill="${statusCol}" stroke="#ffffff" stroke-width="2.5" />
         ${isCalibrating ? `
-          <!-- Pulsing calibration drag ring -->
+          <!-- Pulsing calibration drag ring with generous touch hit target -->
+          <circle cx="${x}" cy="${yAnchor}" r="28" fill="rgba(0,0,0,0.001)" />
           <circle cx="${x}" cy="${yAnchor}" r="18" fill="none" stroke="#00f2fe" stroke-width="2" stroke-dasharray="3 3" class="drag-handle" />
           <text x="${x}" y="${yAnchor - 12}" text-anchor="middle" fill="#00f2fe" font-size="9" font-weight="800">DRAG</text>
         ` : ''}
@@ -1783,9 +2012,10 @@ function renderPhotoOverlay(p) {
       <text x="${tbmCardX + tbmCardW / 2}" y="${tbmCardY + 40}" text-anchor="middle" fill="#ffffff" font-size="18" font-weight="800" font-family="Consolas, monospace">${Math.round(p.tbm).toLocaleString()} kg · ${p.tbmPercent.toFixed(1)}%</text>
       <text x="${tbmCardX + tbmCardW / 2}" y="${tbmCardY + 54}" text-anchor="middle" fill="${tbmCol}" font-size="9.5" font-weight="700">Margin: ${tbmMargin} · Cap: ${p.vehicle.maxTbm} kg</text>
 
-      <!-- Hitch Anchor Point -->
+      <!-- Hitch Anchor Point & Touch Target -->
       <circle cx="${tbm.x}" cy="${tbm.y}" r="8" fill="${tbmCol}" stroke="#ffffff" stroke-width="2.5" />
       ${isCalibrating ? `
+        <circle cx="${tbm.x}" cy="${tbm.y}" r="28" fill="rgba(0,0,0,0.001)" />
         <circle cx="${tbm.x}" cy="${tbm.y}" r="18" fill="none" stroke="#00f2fe" stroke-width="2" stroke-dasharray="3 3" class="drag-handle" />
         <text x="${tbm.x}" y="${tbm.y - 14}" text-anchor="middle" fill="#00f2fe" font-size="9" font-weight="800">DRAG</text>
       ` : ''}
@@ -1843,6 +2073,7 @@ function renderPhotoOverlay(p) {
           <text x="${pillX + 22}" y="${pt.y + 4}" fill="#f8fafc" font-size="10.5" font-weight="800" font-family="Consolas, monospace">${pin.code}: ${pin.kg}${unit}</text>
           
           ${isCalibrating ? `
+            <circle cx="${pt.x}" cy="${pt.y}" r="32" fill="rgba(0,0,0,0.001)" />
             <circle cx="${pt.x}" cy="${pt.y}" r="22" fill="none" stroke="#00f2fe" stroke-width="2.5" stroke-dasharray="3 3" class="drag-handle" />
             <text x="${pt.x}" y="${pillY - 6}" text-anchor="middle" fill="#00f2fe" font-size="9" font-weight="900">DRAG</text>
           ` : ''}
@@ -2332,6 +2563,225 @@ function generatePrintManifest() {
   `);
   win.document.close();
 }
+
+// ============================================================================
+// WIDESCREEN ANDROID AUTO / CAR HEAD-UNIT COCKPIT & NATIVE BRIDGE
+// ============================================================================
+
+function toggleCarCockpitMode(forceState) {
+  if (typeof forceState === 'boolean') {
+    state.carCockpitMode = forceState;
+  } else {
+    state.carCockpitMode = !state.carCockpitMode;
+  }
+  applyCarCockpitDOMState();
+  playChime();
+  saveState();
+  updateTelemetry();
+}
+
+function applyCarCockpitDOMState() {
+  const isCar = !!state.carCockpitMode;
+  document.body.classList.toggle('car-cockpit-active', isCar);
+  const overlay = document.getElementById('car-cockpit-overlay');
+  if (overlay) {
+    overlay.setAttribute('aria-hidden', isCar ? 'false' : 'true');
+  }
+}
+
+function toggleDaylightFromCar() {
+  state.daylightMode = !state.daylightMode;
+  document.body.classList.toggle('daylight-mode', state.daylightMode);
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.textContent = state.daylightMode ? '🌙 HUD Night Mode' : '☀️ Daylight Mode';
+  playBlip();
+  saveState();
+}
+
+function stepZoneOffset(zone, deltaKg) {
+  if (!state.sliderOffsets.hasOwnProperty(zone)) return;
+  const slider = document.getElementById(`slider-${zone}`);
+  const minVal = slider ? parseFloat(slider.min) : -100;
+  const maxVal = slider ? parseFloat(slider.max) : 200;
+  const nextVal = Math.max(minVal, Math.min(maxVal, (state.sliderOffsets[zone] || 0) + deltaKg));
+  state.sliderOffsets[zone] = nextVal;
+  if (slider) slider.value = nextVal;
+  playBlip();
+  saveState();
+  updateTelemetry();
+}
+
+function updateCarCockpitUI(p) {
+  const overlay = document.getElementById('car-cockpit-overlay');
+  if (!overlay) return;
+
+  const setTxt = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt;
+  };
+
+  setTxt('car-veh-label', p.vehicle.name);
+  setTxt('car-van-label', p.caravan.name);
+
+  // Determine overall master compliance status
+  const statuses = [p.status.gvm, p.status.atm, p.status.tbm, p.status.gcm, p.status.rearAxle, p.status.frontAxle, p.status.gtm];
+  let masterStatus = 'pass';
+  if (statuses.includes('fail') || p.status.tbmRatio === 'fail') {
+    masterStatus = 'fail';
+  } else if (statuses.includes('warn') || p.status.tbmRatio === 'warn') {
+    masterStatus = 'warn';
+  }
+
+  const masterEl = document.getElementById('car-master-status');
+  if (masterEl) {
+    masterEl.className = `car-master-status ${masterStatus}`;
+    masterEl.textContent = masterStatus === 'pass'
+      ? '● ALL SYSTEMS LEGAL'
+      : (masterStatus === 'warn' ? '▲ CAUTION: NEAR LIMIT' : '■ OVERLOAD / SWAY ALERT');
+  }
+
+  function updateTile(key, currKg, capKg, marginKg, status, customPillText, customFootRight) {
+    const card = document.getElementById(`car-card-${key}`);
+    if (card) card.className = `car-tele-tile status-${status}`;
+
+    const badge = document.getElementById(`car-badge-${key}`);
+    if (badge) {
+      badge.className = `compliance-badge ${status}`;
+      badge.textContent = status === 'pass' ? 'PASS' : (status === 'warn' ? 'WARN' : 'FAIL');
+    }
+
+    const valEl = document.getElementById(`car-val-${key}`);
+    if (valEl) valEl.innerHTML = `${Math.round(currKg).toLocaleString()} <small>kg</small>`;
+
+    const pct = capKg > 0 ? Math.min(100, Math.max(0, (currKg / capKg) * 100)) : 0;
+    const pctEl = document.getElementById(`car-pct-${key}`);
+    if (pctEl && !customPillText) {
+      pctEl.textContent = `${pct.toFixed(0)}%`;
+    }
+
+    const barEl = document.getElementById(`car-bar-${key}`);
+    if (barEl) {
+      barEl.style.width = `${pct.toFixed(1)}%`;
+      barEl.className = `car-progress-fill ${status}`;
+    }
+
+    setTxt(`car-cap-${key}`, capKg > 0 ? `${capKg.toLocaleString()} kg` : '--');
+    if (customFootRight) {
+      setTxt(`car-mar-${key}`, customFootRight);
+    } else if (marginKg !== null && marginKg !== undefined) {
+      setTxt(`car-mar-${key}`, `${marginKg >= 0 ? '+' : ''}${Math.round(marginKg)} kg`);
+    }
+  }
+
+  // 1. GVM
+  updateTile('gvm', p.vehicleGVM, p.vehicle.gvm, p.margins.gvm, p.status.gvm);
+  // 2. ATM
+  updateTile('atm', p.trailerATM, p.caravan.atm, p.margins.atm, p.status.atm);
+  // 3. TBM
+  const tbmCombinedStatus = (p.status.tbm === 'fail' || p.status.tbmRatio === 'fail')
+    ? 'fail'
+    : ((p.status.tbm === 'warn' || p.status.tbmRatio === 'warn') ? 'warn' : 'pass');
+  updateTile(
+    'tbm',
+    p.tbm,
+    p.vehicle.maxTbm,
+    p.margins.tbm,
+    tbmCombinedStatus,
+    true,
+    `${p.margins.tbm >= 0 ? '+' : ''}${Math.round(p.margins.tbm)} kg (${p.status.tbmRatio === 'pass' ? '8–11% OK' : 'Check %'})`
+  );
+  setTxt('car-ratio-tbm', `${p.tbmPercent.toFixed(1)}% ATM`);
+
+  // 4. GCM
+  updateTile('gcm', p.gcm, p.vehicle.gcm, p.margins.gcm, p.status.gcm);
+
+  // 5. Steer Axle (Front)
+  const faDelta = Math.round(p.frontAxleLoad - p.vehicle.frontAxleTare);
+  updateTile('fa', p.frontAxleLoad, p.vehicle.maxFrontAxle || 0, p.margins.frontAxle, p.status.frontAxle, true);
+  setTxt('car-delta-fa', faDelta < 0 ? `⚠️ ${faDelta}kg Lift` : `+${faDelta}kg Grip`);
+
+  // 6. Drive Axle (Rear) + Caravan GTM
+  updateTile('ra', p.rearAxleLoad, p.vehicle.maxRearAxle || 0, p.margins.rearAxle, p.status.rearAxle, true);
+  setTxt('car-val-gtm', `GTM: ${Math.round(p.trailerGTM)} kg`);
+}
+
+// Push Live Telemetry JSON to Native Android Auto Service (androidx.car.app)
+function pushToAndroidAutoBridge(p) {
+  try {
+    const payload = {
+      timestamp: Date.now(),
+      vehicleName: p.vehicle.name,
+      caravanName: p.caravan.name,
+      gvm: {
+        current: Math.round(p.vehicleGVM),
+        limit: p.vehicle.gvm,
+        margin: Math.round(p.margins.gvm),
+        status: p.status.gvm
+      },
+      atm: {
+        current: Math.round(p.trailerATM),
+        limit: p.caravan.atm,
+        margin: Math.round(p.margins.atm),
+        status: p.status.atm
+      },
+      tbm: {
+        current: Math.round(p.tbm),
+        limit: p.vehicle.maxTbm,
+        margin: Math.round(p.margins.tbm),
+        ratioPct: Number(p.tbmPercent.toFixed(2)),
+        status: (p.status.tbm === 'fail' || p.status.tbmRatio === 'fail') ? 'fail' : p.status.tbm
+      },
+      gcm: {
+        current: Math.round(p.gcm),
+        limit: p.vehicle.gcm,
+        margin: Math.round(p.margins.gcm),
+        status: p.status.gcm
+      },
+      frontAxle: {
+        current: Math.round(p.frontAxleLoad),
+        limit: p.vehicle.maxFrontAxle || 0,
+        margin: p.margins.frontAxle !== null ? Math.round(p.margins.frontAxle) : 0,
+        gripDelta: Math.round(p.frontAxleLoad - p.vehicle.frontAxleTare),
+        status: p.status.frontAxle
+      },
+      rearAxle: {
+        current: Math.round(p.rearAxleLoad),
+        limit: p.vehicle.maxRearAxle || 0,
+        margin: p.margins.rearAxle !== null ? Math.round(p.margins.rearAxle) : 0,
+        gtm: Math.round(p.trailerGTM),
+        status: p.status.rearAxle
+      },
+      waterTanks: {
+        frontLiters: Math.round(p.zones.frontTank || 0),
+        rearLiters: Math.round(p.zones.rearTank || 0)
+      }
+    };
+
+    const jsonStr = JSON.stringify(payload);
+    localStorage.setItem('towing_aa_live_telemetry', jsonStr);
+
+    if (window.AndroidAutoBridge && typeof window.AndroidAutoBridge.onTelemetryUpdated === 'function') {
+      window.AndroidAutoBridge.onTelemetryUpdated(jsonStr);
+    }
+  } catch (err) {
+    console.warn('AndroidAutoBridge sync warning:', err);
+  }
+}
+
+// Receive Commands Dispatched from the Native Android Auto Head-Unit Screen
+window.applyCarAction = function(action, value) {
+  if (action === 'waterPreset') {
+    setWaterPreset(value);
+  } else if (action === 'stepZone') {
+    if (value && value.zone) {
+      stepZoneOffset(value.zone, Number(value.delta) || 0);
+    }
+  } else if (action === 'resetBaseline') {
+    Object.keys(state.sliderOffsets).forEach(k => state.sliderOffsets[k] = 0);
+    saveState();
+    updateTelemetry();
+  }
+};
 
 // Kick off when DOM is ready
 document.addEventListener('DOMContentLoaded', initApp);

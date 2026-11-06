@@ -55,6 +55,9 @@
 
       <!-- Actions -->
       <div class="header-actions">
+        <button id="car-mode-btn" class="hud-btn car-mode-trigger" onclick="toggleCarCockpitMode()" title="Launch widescreen Android Auto / Car Head-Unit Cockpit">
+          🚗 Car Display
+        </button>
         <button id="update-check-btn" class="hud-btn" onclick="checkForUpdates()" title="Force check for updates and refresh cache">
           🔄 Refresh App
         </button>
@@ -208,6 +211,16 @@
             <button id="btn-view-photo" class="toggle-pill" onclick="setRigViewMode('photo')">📷 Rig Photo</button>
           </div>
 
+          <!-- Rig Zoom & Pan Controls Toolbar -->
+          <div class="rig-zoom-toolbar" id="rig-zoom-toolbar" title="Zoom &amp; Pan Rig View">
+            <button id="btn-rig-zoom-out" class="zoom-btn" type="button" onclick="changeRigZoom(-0.25)" title="Zoom Out" aria-label="Zoom Out">−</button>
+            <button id="btn-rig-zoom-reset" class="zoom-btn zoom-level-display" type="button" onclick="resetRigZoom()" title="Reset Zoom to 100%" aria-label="Reset Zoom">
+              <span id="rig-zoom-label">100%</span>
+            </button>
+            <button id="btn-rig-zoom-in" class="zoom-btn" type="button" onclick="changeRigZoom(0.25)" title="Zoom In" aria-label="Zoom In">+</button>
+            <button id="btn-rig-zoom-fit" class="zoom-btn fit-btn" type="button" onclick="resetRigZoom()" title="Fit View to Screen" aria-label="Fit View">↺ Fit</button>
+          </div>
+
           <!-- Photo Overlay Customization Bar (Visible in Photo View) -->
           <div id="photo-overlay-controls" class="photo-overlay-controls" style="display: none;">
             <button id="btn-calibrate-overlay" class="hud-btn" onclick="toggleOverlayCalibration()" title="Click to drag pins to match your photo">
@@ -235,17 +248,44 @@
       </div>
       
       <div id="blueprint-canvas-wrap" class="blueprint-canvas-wrap">
+        <!-- Floating HUD Zoom Controls (Docked inside Canvas for fast mobile access) -->
+        <div class="rig-canvas-hud-overlay">
+          <div id="rig-zoom-badge" class="rig-zoom-badge" style="display: none;">
+            <span id="rig-zoom-badge-text">🔍 100%</span>
+          </div>
+          <div class="rig-floating-zoom-pill" title="Zoom &amp; Pan Controls">
+            <button type="button" class="zoom-pill-btn" onclick="changeRigZoom(-0.25)" title="Zoom Out" aria-label="Zoom Out">−</button>
+            <button type="button" class="zoom-pill-btn zoom-val" onclick="resetRigZoom()" title="Reset Zoom" aria-label="Reset Zoom">
+              <span id="floating-zoom-label">100%</span>
+            </button>
+            <button type="button" class="zoom-pill-btn" onclick="changeRigZoom(0.25)" title="Zoom In" aria-label="Zoom In">+</button>
+            <button type="button" class="zoom-pill-btn zoom-fit" onclick="resetRigZoom()" title="Reset / Fit" aria-label="Fit View">↺</button>
+          </div>
+        </div>
+
         <!-- 1. Vector Blueprint SVG View -->
-        <svg id="rig-blueprint-svg" class="rig-svg" viewBox="0 0 1150 365">
-          <!-- Dynamically generated in app.js -->
-        </svg>
+        <div id="rig-blueprint-stage" class="rig-blueprint-stage">
+          <svg id="rig-blueprint-svg" class="rig-svg" viewBox="0 0 1150 365">
+            <!-- Dynamically generated in app.js -->
+          </svg>
+        </div>
 
         <!-- 2. Photo View Container -->
         <div id="rig-photo-container" class="rig-photo-wrap" style="display: none;">
-          <!-- Calibration Interactive Mode Banner -->
+          <!-- Calibration Interactive Mode Banner with Mobile Quick Zoom -->
           <div id="calibration-banner" class="calibration-banner" style="display: none;">
-            <span>🎯 <strong>Calibration Mode Active:</strong> Click &amp; drag any marker or pin on your photo to align it with your car's wheels, tow hitch, and caravan axles. Changes save automatically!</span>
-            <button class="hud-btn primary" style="padding: 2px 10px; font-size: 11px;" onclick="toggleOverlayCalibration()">Done</button>
+            <div class="cal-banner-info">
+              <span>🎯 <strong>Calibration Active:</strong> Drag markers &amp; pins to align with your rig.</span>
+            </div>
+            <div class="cal-banner-actions">
+              <div class="cal-zoom-pills" title="Quick Zoom for Mobile Relocation">
+                <span class="cal-zoom-label">Zoom:</span>
+                <button type="button" class="cal-zoom-btn" onclick="setRigZoomLevel(1.5)">1.5x</button>
+                <button type="button" class="cal-zoom-btn" onclick="setRigZoomLevel(2.0)">2.0x</button>
+                <button type="button" class="cal-zoom-btn" onclick="resetRigZoom()">1.0x</button>
+              </div>
+              <button class="hud-btn primary" style="padding: 3px 12px; font-size: 11px;" onclick="toggleOverlayCalibration()">Done</button>
+            </div>
           </div>
 
           <div class="rig-photo-viewport">
@@ -548,6 +588,174 @@
       </div>
     </section>
 
+  </div>
+
+  <!-- ================= WIDESCREEN ANDROID AUTO / CAR HEAD-UNIT COCKPIT ================= -->
+  <div id="car-cockpit-overlay" class="car-cockpit-overlay" aria-hidden="true">
+    <!-- Top Head-Unit Status Bar -->
+    <header class="car-topbar">
+      <div class="car-brand">
+        <span class="car-logo-pill">AA // HUD</span>
+        <div class="car-rig-summary">
+          <span id="car-veh-label" class="car-rig-title">Tow Vehicle</span>
+          <span class="car-rig-sep">+</span>
+          <span id="car-van-label" class="car-rig-title">Caravan</span>
+        </div>
+      </div>
+
+      <div id="car-master-status" class="car-master-status pass">
+        ● ALL SYSTEMS LEGAL
+      </div>
+
+      <div class="car-top-actions">
+        <button type="button" class="car-action-btn" onclick="toggleDaylightFromCar()" title="Toggle Daylight / Night Display">
+          ☀️/🌙 Theme
+        </button>
+        <button type="button" class="car-action-btn exit" onclick="toggleCarCockpitMode(false)" title="Return to Full Engineering View">
+          ✕ Exit Car Mode
+        </button>
+      </div>
+    </header>
+
+    <!-- 6-Card Widescreen Telemetry Grid (3x2 non-scrolling layout) -->
+    <main class="car-gauges-grid">
+      <!-- 1. GVM -->
+      <div id="car-card-gvm" class="car-tele-tile status-pass">
+        <div class="car-tile-head">
+          <span class="car-tile-title">VEHICLE MASS (GVM)</span>
+          <span id="car-badge-gvm" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="car-tile-main">
+          <span id="car-val-gvm" class="car-big-num">0 <small>kg</small></span>
+          <span id="car-pct-gvm" class="car-pct-pill">0%</span>
+        </div>
+        <div class="car-progress-track">
+          <div id="car-bar-gvm" class="car-progress-fill pass" style="width: 0%;"></div>
+        </div>
+        <div class="car-tile-foot">
+          <span>Cap: <strong id="car-cap-gvm">0 kg</strong></span>
+          <span>Margin: <strong id="car-mar-gvm">+0 kg</strong></span>
+        </div>
+      </div>
+
+      <!-- 2. ATM -->
+      <div id="car-card-atm" class="car-tele-tile status-pass">
+        <div class="car-tile-head">
+          <span class="car-tile-title">CARAVAN MASS (ATM)</span>
+          <span id="car-badge-atm" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="car-tile-main">
+          <span id="car-val-atm" class="car-big-num">0 <small>kg</small></span>
+          <span id="car-pct-atm" class="car-pct-pill">0%</span>
+        </div>
+        <div class="car-progress-track">
+          <div id="car-bar-atm" class="car-progress-fill pass" style="width: 0%;"></div>
+        </div>
+        <div class="car-tile-foot">
+          <span>Cap: <strong id="car-cap-atm">0 kg</strong></span>
+          <span>Margin: <strong id="car-mar-atm">+0 kg</strong></span>
+        </div>
+      </div>
+
+      <!-- 3. TBM & Sway Ratio -->
+      <div id="car-card-tbm" class="car-tele-tile status-pass">
+        <div class="car-tile-head">
+          <span class="car-tile-title">TOWBALL (TBM &amp; RATIO)</span>
+          <span id="car-badge-tbm" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="car-tile-main">
+          <span id="car-val-tbm" class="car-big-num">0 <small>kg</small></span>
+          <span id="car-ratio-tbm" class="car-pct-pill accent">10.0% ATM</span>
+        </div>
+        <div class="car-progress-track">
+          <div id="car-bar-tbm" class="car-progress-fill pass" style="width: 0%;"></div>
+        </div>
+        <div class="car-tile-foot">
+          <span>Max: <strong id="car-cap-tbm">0 kg</strong></span>
+          <span>Stability: <strong id="car-mar-tbm">8–11% Band</strong></span>
+        </div>
+      </div>
+
+      <!-- 4. GCM -->
+      <div id="car-card-gcm" class="car-tele-tile status-pass">
+        <div class="car-tile-head">
+          <span class="car-tile-title">COMBINED MASS (GCM)</span>
+          <span id="car-badge-gcm" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="car-tile-main">
+          <span id="car-val-gcm" class="car-big-num">0 <small>kg</small></span>
+          <span id="car-pct-gcm" class="car-pct-pill">0%</span>
+        </div>
+        <div class="car-progress-track">
+          <div id="car-bar-gcm" class="car-progress-fill pass" style="width: 0%;"></div>
+        </div>
+        <div class="car-tile-foot">
+          <span>Limit: <strong id="car-cap-gcm">0 kg</strong></span>
+          <span>Margin: <strong id="car-mar-gcm">+0 kg</strong></span>
+        </div>
+      </div>
+
+      <!-- 5. Front Steer Axle -->
+      <div id="car-card-fa" class="car-tele-tile status-pass">
+        <div class="car-tile-head">
+          <span class="car-tile-title">STEER AXLE (FRONT)</span>
+          <span id="car-badge-fa" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="car-tile-main">
+          <span id="car-val-fa" class="car-big-num">0 <small>kg</small></span>
+          <span id="car-delta-fa" class="car-pct-pill">+0 kg Grip</span>
+        </div>
+        <div class="car-progress-track">
+          <div id="car-bar-fa" class="car-progress-fill pass" style="width: 0%;"></div>
+        </div>
+        <div class="car-tile-foot">
+          <span>Limit: <strong id="car-cap-fa">0 kg</strong></span>
+          <span>Margin: <strong id="car-mar-fa">+0 kg</strong></span>
+        </div>
+      </div>
+
+      <!-- 6. Rear Drive Axle & Caravan GTM -->
+      <div id="car-card-ra" class="car-tele-tile status-pass">
+        <div class="car-tile-head">
+          <span class="car-tile-title">DRIVE AXLE &amp; VAN GTM</span>
+          <span id="car-badge-ra" class="compliance-badge pass">PASS</span>
+        </div>
+        <div class="car-tile-main">
+          <span id="car-val-ra" class="car-big-num">0 <small>kg</small></span>
+          <span id="car-val-gtm" class="car-pct-pill">GTM: 0 kg</span>
+        </div>
+        <div class="car-progress-track">
+          <div id="car-bar-ra" class="car-progress-fill pass" style="width: 0%;"></div>
+        </div>
+        <div class="car-tile-foot">
+          <span>Rear Cap: <strong id="car-cap-ra">0 kg</strong></span>
+          <span>Margin: <strong id="car-mar-ra">+0 kg</strong></span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Driver-Safe Quick Controls Dock -->
+    <footer class="car-bottom-dock">
+      <div class="car-dock-group">
+        <span class="car-dock-label">WATER BALLAST</span>
+        <div class="car-dock-buttons">
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('both-full')">💧 Full Tanks</button>
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('both-dry')">🏜️ Dry Tanks</button>
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('front-full-rear-dry')">⬆️ Front Full</button>
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('front-dry-rear-full')">⬇️ Rear Full</button>
+        </div>
+      </div>
+
+      <div class="car-dock-group">
+        <span class="car-dock-label">QUICK TRIM (±15 KG)</span>
+        <div class="car-dock-buttons">
+          <button type="button" class="car-dock-btn" onclick="stepZoneOffset('aFrame', -15)">A-Frame -15</button>
+          <button type="button" class="car-dock-btn" onclick="stepZoneOffset('aFrame', 15)">A-Frame +15</button>
+          <button type="button" class="car-dock-btn" onclick="stepZoneOffset('tub', -15)">Tub -15</button>
+          <button type="button" class="car-dock-btn" onclick="stepZoneOffset('tub', 15)">Tub +15</button>
+        </div>
+      </div>
+    </footer>
   </div>
 
   <!-- ================= MODALS ================= -->

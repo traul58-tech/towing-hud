@@ -20,5 +20,14 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Car Display (Android Auto Mode)",
+      "short_name": "Car HUD",
+      "description": "Open widescreen non-scrolling head-unit telemetry cockpit",
+      "url": "./?mode=car",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }
