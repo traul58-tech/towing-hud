@@ -1292,6 +1292,15 @@ function setWaterPreset(presetName) {
   if (presetName === 'both-full') {
     if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', t1Cap);
     if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', t2Cap);
+  } else if (presetName === 'both-75') {
+    if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', Math.round(t1Cap * 0.75));
+    if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', Math.round(t2Cap * 0.75));
+  } else if (presetName === 'both-50') {
+    if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', Math.round(t1Cap * 0.50));
+    if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', Math.round(t2Cap * 0.50));
+  } else if (presetName === 'both-25') {
+    if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', Math.round(t1Cap * 0.25));
+    if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', Math.round(t2Cap * 0.25));
   } else if (presetName === 'both-dry') {
     if (cfg.frontTank && cfg.frontTank.enabled) setQuickTank('frontTank', 0);
     if (cfg.rearTank && cfg.rearTank.enabled) setQuickTank('rearTank', 0);
@@ -2728,10 +2737,33 @@ function updateCarCockpitUI(p) {
 // Push Live Telemetry JSON to Native Android Auto Service (androidx.car.app)
 function pushToAndroidAutoBridge(p) {
   try {
+    const vehiclesList = (typeof DEFAULT_TOWING_DATA !== 'undefined' && DEFAULT_TOWING_DATA.vehicles)
+      ? DEFAULT_TOWING_DATA.vehicles.map(v => ({
+          id: v.id,
+          name: v.name,
+          gvm: v.gvm,
+          gcm: v.gcm,
+          maxTbm: v.maxTbm
+        }))
+      : [];
+    const caravansList = (typeof DEFAULT_TOWING_DATA !== 'undefined' && DEFAULT_TOWING_DATA.caravans)
+      ? DEFAULT_TOWING_DATA.caravans.map(c => ({
+          id: c.id,
+          name: c.name,
+          atm: c.atm,
+          tare: c.tare
+        }))
+      : [];
+
     const payload = {
       timestamp: Date.now(),
+      activeVehicleId: state.currentVehicleId,
+      activeCaravanId: state.currentCaravanId,
       vehicleName: p.vehicle.name,
       caravanName: p.caravan.name,
+      cantileverMultiplier: Number((1 + p.cantileverRatio).toFixed(2)),
+      frontUnweightRatio: Number(p.cantileverRatio.toFixed(2)),
+      caravanCargoKg: Math.round(p.caravanCargoTotal || 0),
       gvm: {
         current: Math.round(p.vehicleGVM),
         limit: p.vehicle.gvm,
@@ -2769,12 +2801,27 @@ function pushToAndroidAutoBridge(p) {
         limit: p.vehicle.maxRearAxle || 0,
         margin: p.margins.rearAxle !== null ? Math.round(p.margins.rearAxle) : 0,
         gtm: Math.round(p.trailerGTM),
+        gtmLimit: p.caravan.maxGtm || (p.caravan.atm - p.caravan.tareTbm),
+        gtmMargin: Math.round(p.margins.gtm),
+        gtmStatus: p.status.gtm,
         status: p.status.rearAxle
       },
       waterTanks: {
         frontLiters: Math.round(p.zones.frontTank || 0),
         rearLiters: Math.round(p.zones.rearTank || 0)
-      }
+      },
+      zones: {
+        cabin: Math.round(p.zones.cabin || 0),
+        tub: Math.round(p.zones.tub || 0),
+        aFrame: Math.round(p.zones.aFrame || 0),
+        frontStorage: Math.round(p.zones.frontStorage || 0),
+        midStorage: Math.round(p.zones.midStorage || 0),
+        rearStorage: Math.round(p.zones.rearStorage || 0),
+        frontTank: Math.round(p.zones.frontTank || 0),
+        rearTank: Math.round(p.zones.rearTank || 0)
+      },
+      vehiclesList,
+      caravansList
     };
 
     const jsonStr = JSON.stringify(payload);
@@ -2793,11 +2840,30 @@ window.applyCarAction = function(action, value) {
   if (action === 'waterPreset') {
     setWaterPreset(value);
   } else if (action === 'stepZone') {
-    if (value && value.zone) {
+    if (typeof value === 'string' && value.includes(':')) {
+      const parts = value.split(':');
+      stepZoneOffset(parts[0], Number(parts[1]) || 0);
+    } else if (value && value.zone) {
       stepZoneOffset(value.zone, Number(value.delta) || 0);
     }
   } else if (action === 'resetBaseline') {
     Object.keys(state.sliderOffsets).forEach(k => state.sliderOffsets[k] = 0);
+    document.querySelectorAll('.zone-slider').forEach(s => s.value = 0);
+    playChime();
+    saveState();
+    updateTelemetry();
+  } else if (action === 'selectVehicle' && value) {
+    state.currentVehicleId = value;
+    const sel = document.getElementById('vehicle-select');
+    if (sel) sel.value = value;
+    playChime();
+    saveState();
+    updateTelemetry();
+  } else if (action === 'selectCaravan' && value) {
+    state.currentCaravanId = value;
+    const sel = document.getElementById('caravan-select');
+    if (sel) sel.value = value;
+    playChime();
     saveState();
     updateTelemetry();
   }

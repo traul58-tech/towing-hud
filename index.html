@@ -739,20 +739,22 @@
       <div class="car-dock-group">
         <span class="car-dock-label">WATER BALLAST</span>
         <div class="car-dock-buttons">
-          <button type="button" class="car-dock-btn" onclick="setWaterPreset('both-full')">💧 Full Tanks</button>
-          <button type="button" class="car-dock-btn" onclick="setWaterPreset('both-dry')">🏜️ Dry Tanks</button>
-          <button type="button" class="car-dock-btn" onclick="setWaterPreset('front-full-rear-dry')">⬆️ Front Full</button>
-          <button type="button" class="car-dock-btn" onclick="setWaterPreset('front-dry-rear-full')">⬇️ Rear Full</button>
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('both-full')">💧 100%</button>
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('both-50')">💧 50%</button>
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('both-dry')">🏜️ 0%</button>
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('front-full-rear-dry')">⬆️ F-Full</button>
+          <button type="button" class="car-dock-btn" onclick="setWaterPreset('front-dry-rear-full')">⬇️ R-Full</button>
         </div>
       </div>
 
       <div class="car-dock-group">
         <span class="car-dock-label">QUICK TRIM (±15 KG)</span>
         <div class="car-dock-buttons">
-          <button type="button" class="car-dock-btn" onclick="stepZoneOffset('aFrame', -15)">A-Frame -15</button>
-          <button type="button" class="car-dock-btn" onclick="stepZoneOffset('aFrame', 15)">A-Frame +15</button>
+          <button type="button" class="car-dock-btn" onclick="stepZoneOffset('aFrame', -15)">AF -15</button>
+          <button type="button" class="car-dock-btn" onclick="stepZoneOffset('aFrame', 15)">AF +15</button>
           <button type="button" class="car-dock-btn" onclick="stepZoneOffset('tub', -15)">Tub -15</button>
           <button type="button" class="car-dock-btn" onclick="stepZoneOffset('tub', 15)">Tub +15</button>
+          <button type="button" class="car-dock-btn" onclick="window.applyCarAction('resetBaseline')">↺ Reset</button>
         </div>
       </div>
     </footer>
