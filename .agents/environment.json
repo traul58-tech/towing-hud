@@ -1,0 +1,3 @@
+{
+  "install": "set -euo pipefail; missing=(); command -v jq >/dev/null 2>&1 || missing+=(jq); command -v python3 >/dev/null 2>&1 || missing+=(python3); command -v node >/dev/null 2>&1 || missing+=(nodejs); if [ ${#missing[@]} -gt 0 ]; then sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \"${missing[@]}\"; fi; jq empty manifest.json towing_data.json && node --check app.js && node --check data.js && node --check sw.js && test -f index.html && test -f style.css"
+}
